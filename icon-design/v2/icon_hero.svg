@@ -1,0 +1,43 @@
+<svg width="512" height="512" viewBox="0 0 512 512" xmlns="http://www.w3.org/2000/svg">
+  <rect x="0" y="0" width="512" height="512" rx="115" ry="115" fill="#9E230B"/>
+
+  <circle cx="178" cy="108" r="29" fill="#B85E1A"/>
+  <circle cx="178" cy="111" r="14" fill="#2B1608"/>
+  <circle cx="334" cy="108" r="29" fill="#B85E1A"/>
+  <circle cx="334" cy="111" r="14" fill="#2B1608"/>
+
+  <path d="M 256.0,22.0 L 283.1,71.1 L 328.9,38.6 L 332.1,94.6 L 387.3,85.3 L 365.9,137.1 L 419.8,152.6 L 378.0,190.0 L 419.8,227.4 L 365.9,242.9 L 387.3,294.7 L 332.1,285.4 L 328.9,341.4 L 283.1,308.9 L 256.0,358.0 L 228.9,308.9 L 183.1,341.4 L 179.9,285.4 L 124.7,294.7 L 146.1,242.9 L 92.2,227.4 L 134.0,190.0 L 92.2,152.6 L 146.1,137.1 L 124.7,85.3 L 179.9,94.6 L 183.1,38.6 L 228.9,71.1 Z" fill="#D97D2B"/>
+  <circle cx="256" cy="190" r="104" fill="#F5E1C0"/>
+
+  <ellipse cx="217" cy="182" rx="11" ry="14" fill="#2B1608"/>
+  <ellipse cx="295" cy="182" rx="11" ry="14" fill="#2B1608"/>
+
+  <path d="M 202,160 Q 217,148 232,162"
+        stroke="#2B1608" stroke-width="8" fill="none" stroke-linecap="round"/>
+  <path d="M 280,162 Q 295,148 310,160"
+        stroke="#2B1608" stroke-width="8" fill="none" stroke-linecap="round"/>
+
+  <path d="M 237,240 L 275,240 L 256,259 Z" fill="#2B1608"/>
+  <line x1="256" y1="259" x2="256" y2="272" stroke="#2B1608" stroke-width="6" stroke-linecap="round"/>
+
+  <path id="mouth" d="M 160,268
+           Q 256,360 352,268
+           Q 256,298 160,268 Z" fill="#2B1608"/>
+
+  <path d="M 176,274 L 195,274 L 185,298 Z" fill="#FFFFFF"/>
+  <path d="M 336,274 L 317,274 L 327,298 Z" fill="#FFFFFF"/>
+  <path d="M 234,294 L 250,294 L 242,314 Z" fill="#FFFFFF"/>
+  <path d="M 278,294 L 262,294 L 270,314 Z" fill="#FFFFFF"/>
+
+  <circle cx="256" cy="360" r="82" fill="#F5E1C0" stroke="#2B1608" stroke-width="5"/>
+  <ellipse cx="256" cy="360" rx="33" ry="82" fill="none" stroke="#2B1608" stroke-width="4"/>
+  <line x1="174" y1="360" x2="338" y2="360" stroke="#2B1608" stroke-width="4"/>
+  <line x1="185" y1="319" x2="327" y2="319" stroke="#2B1608" stroke-width="3" opacity="0.5"/>
+  <line x1="185" y1="401" x2="327" y2="401" stroke="#2B1608" stroke-width="3" opacity="0.5"/>
+  <text x="256" y="376" text-anchor="middle" font-family="Arial, Helvetica, sans-serif"
+        font-size="46" font-weight="900" fill="#2B1608">CV</text>
+
+  <use href="#mouth" fill="#2B1608"/>
+  <path d="M 176,274 L 195,274 L 185,298 Z" fill="#FFFFFF"/>
+  <path d="M 336,274 L 317,274 L 327,298 Z" fill="#FFFFFF"/>
+</svg>

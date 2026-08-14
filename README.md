@@ -5,6 +5,15 @@ job application forms — and writes tailored cover letters — using an LLM to
 match your CV data (and your own past cover letter, as a style reference) to
 whatever a given job site needs.
 
+## Icon
+
+A flat-vector mark in `#9E230B` — a CV document, a sync badge, a generic "TXT"
+file badge, and a folder with an "F" monogram. `icons/icon-128.png` uses the
+full composition; `icons/icon-16.png` / `icon-32.png` / `icon-48.png` use a
+simplified variant (drops the TXT badge) since the full mark gets muddy at
+toolbar sizes. Source SVGs and design iterations are in `icon-design/` —
+`icon_final_hero.svg` / `icon_final_simple.svg` are the ones actually in use.
+
 ## How it works
 
 1. **Upload your CV and (optionally) a past cover letter** from the
