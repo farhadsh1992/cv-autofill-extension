@@ -1,0 +1,96 @@
+Farhad's CV AutoFill — Install Instructions
+=============================================
+
+Extension folder (needed for every method below):
+/Users/farhad/Documents/VisTeamPro/Programming11/Learning_AI_Agents/agents2/cv_autofill_extension
+
+
+FIREFOX (development / personal use)
+-------------------------------------
+1. Open Firefox and go to: about:debugging#/runtime/this-firefox
+2. Click "Load Temporary Add-on...".
+3. In the file picker, select manifest.json inside the cv_autofill_extension
+   folder above.
+4. The extension icon appears in the toolbar.
+
+Note: this stays loaded only until you restart Firefox — "temporary" add-ons
+don't persist across restarts. For a permanent install you'd need to sign it
+via addons.mozilla.org (self-distribution/unlisted signing is free).
+
+
+SAFARI (macOS)
+---------------
+Safari cannot load a raw extension folder directly — Apple requires
+WebExtensions to be wrapped in a native app via Xcode. Steps:
+
+1. Open Terminal and run:
+   xcrun safari-web-extension-converter /Users/farhad/Documents/VisTeamPro/Programming11/Learning_AI_Agents/agents2/cv_autofill_extension
+
+   This generates a new Xcode project that wraps the extension in a small
+   host app.
+
+2. Open the generated .xcodeproj file in Xcode.
+
+3. Click the Run/Play button (▶) in Xcode to build and run. This installs
+   the host app plus the Safari extension. You'll need a free Apple ID
+   signed into Xcode (Xcode > Settings > Accounts) — no paid Apple
+   Developer account required just to run it on your own Mac.
+
+4. In Safari, go to: Settings > Extensions, and enable "Farhad's CV AutoFill".
+
+5. Since this build isn't notarized/signed for the App Store, Safari will
+   likely block it until you also do:
+   Settings > Advanced > check "Show features for web developers"
+   then: Develop menu (in the menu bar) > Allow Unsigned Extensions
+   (This setting resets when Safari restarts, so you'll need to re-enable
+   it each time you relaunch Safari during development.)
+
+To actually distribute this to other people via the App Store, you'd need
+a paid Apple Developer Program membership and to pass App Review — not
+needed just to use it yourself.
+
+
+ORION (Kagi's browser, macOS/iOS)
+-----------------------------------
+Orion supports Chrome/Firefox-style extensions natively and can load an
+unpacked extension folder directly — no Xcode conversion needed.
+
+1. Open Orion and go to: Settings > Extensions.
+2. Look for an option to add/install an extension from disk (Orion supports
+   loading an unpacked folder similarly to Chrome's "Load unpacked"). This
+   may be behind a developer-mode toggle — enable that first if you see one.
+3. Point it at the extension folder:
+   /Users/farhad/Documents/VisTeamPro/Programming11/Learning_AI_Agents/agents2/cv_autofill_extension
+4. It should read manifest.json directly since the extension is already
+   Manifest V3.
+
+Orion's exact menu wording changes between versions, so if the option isn't
+obviously labeled "load extension" or "install from folder", check under a
+developer/advanced settings toggle in the Extensions section.
+
+
+AFTER INSTALLING (any browser)
+--------------------------------
+1. Click the extension icon, then open its Options page (gear icon in the
+   popup, or via the browser's extension management page).
+2. Pick a provider: OpenAI or Anthropic (Claude). Note: neither company
+   offers a "log in with your account" flow for third-party extensions —
+   you need a real API key from their developer console, billed per call,
+   separate from any ChatGPT Plus / Claude Pro subscription.
+     OpenAI key:    https://platform.openai.com/api-keys
+     Anthropic key: https://console.anthropic.com/settings/keys
+3. Paste the key into the matching field and pick a model (defaults:
+   gpt-4o-mini for OpenAI, claude-sonnet-5 for Anthropic). Click Save.
+4. Still in Options, upload your CV (PDF, Word .docx, or paste text) once,
+   and optionally a past cover letter too (same file types) — it's used
+   only as a style/tone reference, never sent to any job site as-is.
+5. On any job application page, open the popup and click "Autofill this
+   page". Review everything it fills in before you submit — it never
+   clicks Submit itself.
+6. Or click "Generate cover letter for this page" to get a new draft
+   tailored to that job, grounded in your CV and written in the voice of
+   your saved reference letter. Edit it in the popup, then Copy it or
+   click "Insert into page field" if the extension found a matching field.
+
+The popup and Options page both follow your OS/browser's light or dark
+appearance automatically — no setting to toggle.

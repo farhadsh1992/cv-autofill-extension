@@ -1,0 +1,175 @@
+:root {
+  color-scheme: light dark;
+  --bg: #ffffff;
+  --fg: #1c1c1e;
+  --muted: #666666;
+  --border: #cccccc;
+  --panel: #f5f5f7;
+  --panel-hover: #ececef;
+  --accent: #0a84ff;
+  --accent-hover: #0071e3;
+  --danger: #d70015;
+  --success: #2a8f3f;
+  --disabled-bg: #c7c7cc;
+  --textarea-bg: #ffffff;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --bg: #1c1c1e;
+    --fg: #f2f2f7;
+    --muted: #9a9a9e;
+    --border: #48484a;
+    --panel: #2c2c2e;
+    --panel-hover: #3a3a3c;
+    --accent: #0a84ff;
+    --accent-hover: #409cff;
+    --danger: #ff453a;
+    --success: #32d74b;
+    --disabled-bg: #48484a;
+    --textarea-bg: #2c2c2e;
+  }
+}
+
+* {
+  box-sizing: border-box;
+}
+
+body {
+  width: 320px;
+  margin: 0;
+  padding: 12px 14px 16px;
+  font-family: -apple-system, "Segoe UI", Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  color: var(--fg);
+  background: var(--bg);
+}
+
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 8px;
+}
+
+h1 {
+  font-size: 15px;
+  margin: 0;
+}
+
+.linklike {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 15px;
+  color: var(--muted);
+}
+
+.muted {
+  color: var(--muted);
+}
+
+.small {
+  font-size: 11px;
+}
+
+.summary {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+  line-height: 1.5;
+}
+
+.row {
+  margin: 8px 0;
+  display: flex;
+  gap: 8px;
+}
+
+section {
+  margin-bottom: 12px;
+}
+
+.fileBtn {
+  display: inline-block;
+  padding: 6px 12px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  cursor: pointer;
+  background: var(--panel);
+  color: var(--fg);
+}
+
+.fileBtn:hover {
+  background: var(--panel-hover);
+}
+
+textarea {
+  width: 100%;
+  margin-top: 6px;
+  font-family: inherit;
+  font-size: 12px;
+  resize: vertical;
+  background: var(--textarea-bg);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px;
+}
+
+details {
+  margin-top: 6px;
+}
+
+summary {
+  cursor: pointer;
+  color: var(--accent);
+  font-size: 12px;
+}
+
+button {
+  padding: 7px 14px;
+  border: none;
+  border-radius: 6px;
+  background: var(--accent);
+  color: #fff;
+  font-size: 13px;
+  cursor: pointer;
+  width: 100%;
+}
+
+button:disabled {
+  background: var(--disabled-bg);
+  cursor: default;
+}
+
+button:not(:disabled):hover {
+  background: var(--accent-hover);
+}
+
+button.secondary {
+  width: auto;
+  flex: 1;
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+button.secondary:hover {
+  background: var(--panel-hover);
+}
+
+.hidden {
+  display: none;
+}
+
+.status {
+  margin-top: 12px;
+  font-size: 12px;
+  min-height: 14px;
+  color: var(--fg);
+}
+
+.status.error {
+  color: var(--danger);
+}

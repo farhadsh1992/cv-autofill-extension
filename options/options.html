@@ -1,0 +1,119 @@
+<!doctype html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <title>Farhad's CV AutoFill — Options</title>
+    <link rel="stylesheet" href="options.css" />
+  </head>
+  <body>
+    <h1>Farhad's CV AutoFill — Options</h1>
+
+    <section>
+      <h2>AI provider</h2>
+      <p class="muted">
+        Neither OpenAI nor Anthropic offer a public "log in with your account" flow
+        for third-party extensions like this one — the ChatGPT/Claude.ai subscription
+        login is separate from their developer APIs. An API key (billed per call,
+        separate from any Plus/Pro subscription) is the supported way to connect.
+      </p>
+      <select id="provider">
+        <option value="openai">OpenAI</option>
+        <option value="anthropic">Anthropic (Claude)</option>
+      </select>
+    </section>
+
+    <section id="openaiSection">
+      <h2>OpenAI API key</h2>
+      <p class="muted">
+        Stored only in this browser's local extension storage — never sent anywhere
+        except directly to <code>api.openai.com</code>. Get one at
+        <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.
+      </p>
+      <input type="password" id="openaiApiKey" placeholder="sk-..." autocomplete="off" />
+      <label class="checkboxRow"><input type="checkbox" id="showOpenaiKey" /> Show key</label>
+      <select id="openaiModel">
+        <option value="gpt-4o-mini">gpt-4o-mini (default, fastest/cheapest)</option>
+        <option value="gpt-4o">gpt-4o</option>
+        <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+        <option value="gpt-4.1">gpt-4.1</option>
+      </select>
+    </section>
+
+    <section id="anthropicSection">
+      <h2>Anthropic (Claude) API key</h2>
+      <p class="muted">
+        Stored only in this browser's local extension storage — never sent anywhere
+        except directly to <code>api.anthropic.com</code>. Get one at
+        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a>.
+      </p>
+      <input type="password" id="anthropicApiKey" placeholder="sk-ant-..." autocomplete="off" />
+      <label class="checkboxRow"><input type="checkbox" id="showAnthropicKey" /> Show key</label>
+      <select id="anthropicModel">
+        <option value="claude-sonnet-5">claude-sonnet-5 (default, balanced)</option>
+        <option value="claude-opus-5">claude-opus-5 (most capable)</option>
+        <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (fastest/cheapest)</option>
+      </select>
+    </section>
+
+    <div class="row">
+      <button id="save">Save</button>
+      <span id="saveStatus" class="muted"></span>
+    </div>
+
+    <hr />
+
+    <section>
+      <h2>Your CV</h2>
+      <p class="muted">Upload a PDF or Word (.docx) file, or paste plain text. Re-uploading replaces the saved CV.</p>
+      <div class="row">
+        <label class="fileBtn">
+          Upload PDF / .docx / .txt
+          <input type="file" id="cvFile" accept=".pdf,.docx,.txt" hidden />
+        </label>
+        <span id="cvFileStatus" class="muted"></span>
+      </div>
+      <details>
+        <summary>Or paste CV text</summary>
+        <textarea id="cvPasteText" rows="4" placeholder="Paste your CV as plain text"></textarea>
+        <button id="parseCvText">Parse pasted text</button>
+      </details>
+
+      <p class="muted" style="margin-top: 14px">Parsed CV data — edit if the AI got something wrong, then Save.</p>
+      <textarea id="cvJson" rows="14" spellcheck="false"></textarea>
+      <div class="row">
+        <button id="saveCv">Save CV data</button>
+        <button id="clearCv" class="secondary">Clear CV data</button>
+        <span id="cvStatus" class="muted"></span>
+      </div>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2>Your cover letter</h2>
+      <p class="muted">
+        Upload a past cover letter (PDF or .docx), or paste text. This is used as a
+        style/tone reference when generating a new, tailored cover letter from the
+        popup — it's never sent to a job site, and never copied verbatim.
+      </p>
+      <div class="row">
+        <label class="fileBtn">
+          Upload PDF / .docx / .txt
+          <input type="file" id="coverLetterFile" accept=".pdf,.docx,.txt" hidden />
+        </label>
+        <span id="coverLetterFileStatus" class="muted"></span>
+      </div>
+
+      <p class="muted" style="margin-top: 14px">Saved cover letter text — edit freely, then Save.</p>
+      <textarea id="coverLetterText" rows="10" placeholder="Paste or edit your reference cover letter here"></textarea>
+      <div class="row">
+        <button id="saveCoverLetter">Save cover letter</button>
+        <button id="clearCoverLetter" class="secondary">Clear cover letter</button>
+        <span id="coverLetterStatus" class="muted"></span>
+      </div>
+    </section>
+
+    <script src="../lib/docx.js"></script>
+    <script src="options.js"></script>
+  </body>
+</html>
