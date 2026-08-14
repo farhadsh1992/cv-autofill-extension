@@ -9,6 +9,7 @@ questionArea.focus();
 function setStatus(text, isError = false) {
   statusEl.textContent = text;
   statusEl.classList.toggle("error", isError);
+  makeCopyable(statusEl, text);
 }
 
 askBtn.addEventListener("click", handleAsk);
@@ -34,6 +35,7 @@ async function handleAsk() {
     if (response.error) throw new Error(response.error);
 
     answerBox.textContent = response.answer || "(no answer)";
+    makeCopyable(answerBox, response.answer || "");
     answerBox.classList.remove("hidden");
     copyBtn.classList.remove("hidden");
     setStatus("");

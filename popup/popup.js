@@ -30,7 +30,9 @@ function renderSummary(cvData, coverLetterText) {
     lines.push("CV: not loaded — add one in Options");
   }
   lines.push(coverLetterText ? "Cover letter: saved" : "Cover letter: none saved (optional)");
-  loadedSummaryEl.textContent = lines.join("  ·  ");
+  const summaryText = lines.join("  ·  ");
+  loadedSummaryEl.textContent = summaryText;
+  makeCopyable(loadedSummaryEl, summaryText);
 
   autofillBtn.disabled = !cvData;
   generateBtn.disabled = !cvData;
@@ -40,6 +42,7 @@ function renderSummary(cvData, coverLetterText) {
 function setStatus(text, isError = false) {
   statusEl.textContent = text;
   statusEl.classList.toggle("error", isError);
+  makeCopyable(statusEl, text);
 }
 
 autofillBtn.addEventListener("click", handleAutofill);

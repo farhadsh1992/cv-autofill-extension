@@ -90,12 +90,28 @@ showAnthropicKeyBox.addEventListener("change", () => {
   anthropicApiKeyInput.type = showAnthropicKeyBox.checked ? "text" : "password";
 });
 
+function looksLikeUrl(value) {
+  return value.includes("://");
+}
+
 saveBtn.addEventListener("click", async () => {
+  const openaiApiKey = openaiApiKeyInput.value.trim();
+  const anthropicApiKey = anthropicApiKeyInput.value.trim();
+
+  if (looksLikeUrl(openaiApiKey)) {
+    flash(saveStatus, "The OpenAI API key field has a URL in it, not a key — paste the actual sk-... key instead.", true);
+    return;
+  }
+  if (looksLikeUrl(anthropicApiKey)) {
+    flash(saveStatus, "The Anthropic API key field has a URL in it, not a key — paste the actual sk-ant-... key instead.", true);
+    return;
+  }
+
   await chrome.storage.local.set({
     provider: providerSelect.value,
-    openaiApiKey: openaiApiKeyInput.value.trim(),
+    openaiApiKey,
     openaiModel: openaiModelSelect.value,
-    anthropicApiKey: anthropicApiKeyInput.value.trim(),
+    anthropicApiKey,
     anthropicModel: anthropicModelSelect.value,
   });
   await chrome.storage.local.remove(["apiKey", "model"]);
@@ -251,9 +267,13 @@ clearCoverLetterBtn.addEventListener("click", async () => {
 function flash(el, text, isError = false) {
   el.textContent = text;
   el.style.color = isError ? "var(--danger)" : "var(--success)";
+  makeCopyable(el, text);
   if (!isError) {
     setTimeout(() => {
-      if (el.textContent === text) el.textContent = "";
+      if (el.textContent === text) {
+        el.textContent = "";
+        makeCopyable(el, "");
+      }
     }, 3000);
   }
 }
@@ -347,9 +367,11 @@ function renderResourceList(resources) {
     const label = document.createElement("div");
     label.className = "resourceLabel";
     label.textContent = r.label || r.url || "Note";
+    makeCopyable(label, r.label || r.url || "");
     const preview = document.createElement("div");
     preview.className = "resourcePreview";
     preview.textContent = r.content || "";
+    makeCopyable(preview, r.content || "");
     meta.appendChild(label);
     meta.appendChild(preview);
 

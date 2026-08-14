@@ -158,9 +158,14 @@ async function getSettings() {
     "anthropicModel",
   ]);
   const apiKey = provider === "anthropic" ? anthropicApiKey : openaiApiKey;
+  const providerName = provider === "anthropic" ? "Anthropic (Claude)" : "OpenAI";
   if (!apiKey) {
-    const providerName = provider === "anthropic" ? "Anthropic (Claude)" : "OpenAI";
     throw new Error(`No ${providerName} API key set. Add one on the extension's Options page.`);
+  }
+  if (apiKey.includes("://")) {
+    throw new Error(
+      `The saved ${providerName} API key looks like a URL, not an API key (it contains "://"). Go to Options and re-paste the actual key from the provider's site.`
+    );
   }
   const model = (provider === "anthropic" ? anthropicModel : openaiModel) || DEFAULT_MODELS[provider];
   return { provider, apiKey, model };

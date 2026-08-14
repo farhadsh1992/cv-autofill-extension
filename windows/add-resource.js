@@ -9,6 +9,7 @@ contentArea.focus();
 function setStatus(text, isError = false) {
   statusEl.textContent = text;
   statusEl.classList.toggle("error", isError);
+  makeCopyable(statusEl, text);
 }
 
 cancelBtn.addEventListener("click", () => window.close());
