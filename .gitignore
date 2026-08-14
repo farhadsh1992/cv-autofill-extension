@@ -1,2 +1,5 @@
 dist/
 .DS_Store
+# Generated locally by `xcrun safari-web-extension-converter` (see README) —
+# regenerable any time, and may embed machine/account-specific signing state.
+xcode/

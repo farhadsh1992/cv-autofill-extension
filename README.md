@@ -24,7 +24,8 @@ whatever a given job site needs.
    the job posting's title/description off the current page, and asks the
    model to write a new letter grounded in your CV data, in the voice of your
    saved reference letter (never copied verbatim). The draft appears in the
-   popup, editable, with **Copy** and — if a matching "cover letter" field is
+   popup, editable, with **Copy**, **Download PDF** (generated locally in the
+   browser — no server involved), and — if a matching "cover letter" field is
    found on the page — **Insert into page field**.
 
 ### What it deliberately won't touch
@@ -99,10 +100,11 @@ point it at this folder. See [INSTALL.txt](INSTALL.txt) for more detail.
 ## Files
 
 ```
-manifest.json           Manifest V3 config (permissions: storage, activeTab, scripting)
+manifest.json           Manifest V3 config (permissions: storage, activeTab, scripting, downloads)
 background.js           Service worker — calls OpenAI Responses API or Anthropic Messages API
 shared/blocklist.js     Sensitive-field keyword filter, shared by background + popup
 lib/docx.js             Standalone .docx → plain text extractor (no external library)
+lib/pdf-writer.js       Standalone plain text → PDF writer (no external library)
 popup/                  Toolbar popup UI — "Autofill this page" + "Generate cover letter"
 options/                Provider/API key/model settings, CV upload, cover letter upload
 ```

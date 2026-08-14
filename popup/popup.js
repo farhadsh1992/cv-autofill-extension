@@ -5,6 +5,7 @@ const generateBtn = document.getElementById("generateBtn");
 const coverLetterResult = document.getElementById("coverLetterResult");
 const coverLetterOutput = document.getElementById("coverLetterOutput");
 const copyBtn = document.getElementById("copyBtn");
+const downloadPdfBtn = document.getElementById("downloadPdfBtn");
 const insertBtn = document.getElementById("insertBtn");
 const statusEl = document.getElementById("status");
 
@@ -40,6 +41,7 @@ function setStatus(text, isError = false) {
 autofillBtn.addEventListener("click", handleAutofill);
 generateBtn.addEventListener("click", handleGenerateCoverLetter);
 copyBtn.addEventListener("click", handleCopy);
+downloadPdfBtn.addEventListener("click", handleDownloadPdf);
 insertBtn.addEventListener("click", handleInsert);
 
 async function handleAutofill() {
@@ -163,6 +165,27 @@ async function handleInsert() {
       args: [coverLetterOutput.value],
     });
     setStatus(ok ? "Inserted into the page. Review before submitting." : "Couldn't find that field anymore — copy/paste instead.", !ok);
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+}
+
+async function handleDownloadPdf() {
+  try {
+    const { cvData } = await chrome.storage.local.get("cvData");
+    const bytes = generateCoverLetterPdf(coverLetterOutput.value);
+    const blob = new Blob([bytes], { type: "application/pdf" });
+    const url = URL.createObjectURL(blob);
+
+    const namePart = (cvData && cvData.full_name ? cvData.full_name : "cover-letter")
+      .trim()
+      .replace(/\s+/g, "_")
+      .replace(/[^\w-]/g, "");
+    const filename = `${namePart || "cover-letter"}_Cover_Letter.pdf`;
+
+    await chrome.downloads.download({ url, filename, saveAs: true });
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    setStatus("Cover letter downloaded as PDF.");
   } catch (err) {
     setStatus(err.message, true);
   }

@@ -83,6 +83,7 @@ h1 {
 .row {
   margin: 8px 0;
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
 
