@@ -85,6 +85,20 @@
         <button id="clearCv" class="secondary">Clear CV data</button>
         <span id="cvStatus" class="muted"></span>
       </div>
+
+      <div id="cvStyleSection" class="hidden" style="margin-top: 14px">
+        <p class="muted">
+          Photo and accent color found in your uploaded .docx — used when generating a
+          tailored CV so it isn't just plain black-and-white text. (Only works for
+          .docx uploads; PDFs don't expose this the same way.)
+        </p>
+        <div class="row" style="align-items: center">
+          <img id="cvStylePhoto" class="hidden" alt="Extracted photo" />
+          <span id="cvStyleColorSwatch" class="hidden"></span>
+          <span id="cvStyleColorHex" class="muted"></span>
+          <button id="clearCvStyle" class="secondary">Clear style</button>
+        </div>
+      </div>
     </section>
 
     <hr />

@@ -40,6 +40,9 @@ toolbar sizes. Source SVGs and design iterations are in `icon-design/` —
    the model re-emphasizes/reorders your *real* CV content (summary, bullet
    points, skills) for that specific role — never invents new facts — and it
    downloads as an actual `.docx` file, built locally (no external library).
+   If your uploaded CV was a `.docx` with a photo and an accent color, both
+   get pulled out automatically (Options → Your CV shows a preview) and
+   reused in the generated file, instead of a plain black-and-white template.
 6. **Add info** (popup button) pops open a small window to jot down anything
    else worth the AI knowing — saved as a resource, same as CV/cover letter.
 7. **Ask AI directly** (popup button) opens a small Q&A window for when
@@ -141,9 +144,9 @@ point it at this folder. See [INSTALL.txt](INSTALL.txt) for more detail.
 manifest.json           Manifest V3 config
 background.js           Service worker — calls OpenAI Responses API or Anthropic Messages API
 shared/blocklist.js     Sensitive-field keyword filter, shared by background + popup
-lib/docx.js             Standalone .docx → plain text extractor (no external library)
+lib/docx.js             Standalone .docx → plain text/style extractor (no external library)
 lib/pdf-writer.js       Standalone plain text → PDF writer (no external library)
-lib/docx-writer.js      Standalone plain data → .docx writer (no external library)
+lib/docx-writer.js      Standalone plain data → .docx writer, with optional photo/color (no external library)
 popup/                  Toolbar popup UI — autofill, cover letter, tailored CV, add info, ask AI
 options/                Provider/API key/model settings, CV/cover letter upload, resources, backup folder
 windows/                Small popup windows opened from the toolbar popup ("Add info", "Ask AI directly")
@@ -171,7 +174,13 @@ Chromium doesn't apply its own forced-dark heuristics on top).
 - The generated tailored CV `.docx` is a clean, simple, single-style layout —
   it does not try to reproduce the exact visual formatting of whatever CV
   file you originally uploaded (fonts, tables, multi-column layouts). It's a
-  content rewrite, not a template clone.
+  content rewrite, not a template clone. The one exception: if the source
+  was a `.docx` with an embedded photo and/or a theme accent color, those
+  two specific things get carried over — nothing else about the layout.
+- Photo/color extraction only works for `.docx` uploads, not PDF — PDFs
+  don't expose an embedded image or theme color the same structured way,
+  and there's no local PDF-rendering capability in the extension to work
+  around that. Uploading as `.docx` is the way to get this.
 - Resource website fetching is a plain `fetch()` + HTML-to-text pass — pages
   that require login (most of LinkedIn, for instance) or render their content
   via client-side JavaScript will often come back mostly empty. Static pages

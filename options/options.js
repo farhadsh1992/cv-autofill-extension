@@ -22,6 +22,12 @@ const saveCvBtn = document.getElementById("saveCv");
 const clearCvBtn = document.getElementById("clearCv");
 const cvStatus = document.getElementById("cvStatus");
 
+const cvStyleSection = document.getElementById("cvStyleSection");
+const cvStylePhoto = document.getElementById("cvStylePhoto");
+const cvStyleColorSwatch = document.getElementById("cvStyleColorSwatch");
+const cvStyleColorHex = document.getElementById("cvStyleColorHex");
+const clearCvStyleBtn = document.getElementById("clearCvStyle");
+
 const coverLetterFileInput = document.getElementById("coverLetterFile");
 const coverLetterFileStatus = document.getElementById("coverLetterFileStatus");
 const coverLetterTextArea = document.getElementById("coverLetterText");
@@ -49,6 +55,7 @@ async function init() {
     "openaiModel",
     "anthropicModel",
     "cvData",
+    "cvStyle",
     "coverLetterText",
     "aboutMeText",
     "resources",
@@ -67,6 +74,7 @@ async function init() {
   anthropicApiKeyInput.value = stored.anthropicApiKey || "";
   if (stored.anthropicModel) anthropicModelSelect.value = stored.anthropicModel;
   if (stored.cvData) cvJsonArea.value = JSON.stringify(stored.cvData, null, 2);
+  if (stored.cvStyle) renderCvStyle(stored.cvStyle);
   if (stored.coverLetterText) coverLetterTextArea.value = stored.coverLetterText;
   if (stored.aboutMeText) aboutMeTextArea.value = stored.aboutMeText;
   renderResourceList(stored.resources || []);
@@ -168,8 +176,17 @@ cvFileInput.addEventListener("change", async () => {
       msg = { type: "PARSE_CV", isPdf: true, base64: await fileToBase64(file) };
     } else if (isDocx(file)) {
       flash(cvFileStatus, "Extracting text from .docx...");
-      const text = await extractDocxText(await fileToArrayBuffer(file));
+      const arrayBuffer = await fileToArrayBuffer(file);
+      const text = await extractDocxText(arrayBuffer);
       msg = { type: "PARSE_CV", isPdf: false, text };
+      extractDocxStyle(arrayBuffer)
+        .then((style) => {
+          if (style.photoBase64 || style.accentColorHex) {
+            chrome.storage.local.set({ cvStyle: style });
+            renderCvStyle(style);
+          }
+        })
+        .catch(() => {});
     } else {
       msg = { type: "PARSE_CV", isPdf: false, text: await fileToText(file) };
     }
@@ -219,6 +236,27 @@ clearCvBtn.addEventListener("click", async () => {
   await chrome.storage.local.remove("cvData");
   cvJsonArea.value = "";
   flash(cvStatus, "CV data cleared.");
+});
+
+// ---- CV style (photo + accent color extracted from an uploaded .docx) ----
+
+function renderCvStyle(style) {
+  const hasPhoto = !!(style && style.photoBase64 && style.photoMime);
+  const hasColor = !!(style && style.accentColorHex);
+  cvStyleSection.classList.toggle("hidden", !hasPhoto && !hasColor);
+
+  cvStylePhoto.classList.toggle("hidden", !hasPhoto);
+  if (hasPhoto) cvStylePhoto.src = `data:${style.photoMime};base64,${style.photoBase64}`;
+
+  cvStyleColorSwatch.classList.toggle("hidden", !hasColor);
+  cvStyleColorHex.textContent = hasColor ? style.accentColorHex : "";
+  if (hasColor) cvStyleColorSwatch.style.background = style.accentColorHex;
+}
+
+clearCvStyleBtn.addEventListener("click", async () => {
+  await chrome.storage.local.remove("cvStyle");
+  renderCvStyle(null);
+  flash(cvStatus, "Style cleared — the tailored CV will use plain colors again.");
 });
 
 // ---- Cover letter ----

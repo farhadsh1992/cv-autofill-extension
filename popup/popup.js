@@ -208,7 +208,7 @@ async function handleDownloadPdf() {
 async function handleGenerateCvDocx() {
   generateCvDocxBtn.disabled = true;
   try {
-    const { cvData } = await chrome.storage.local.get("cvData");
+    const { cvData, cvStyle } = await chrome.storage.local.get(["cvData", "cvStyle"]);
     if (!cvData) {
       setStatus("Upload your CV first.", true);
       return;
@@ -226,7 +226,7 @@ async function handleGenerateCvDocx() {
     const response = await chrome.runtime.sendMessage({ type: "GENERATE_CV_DOCX", cvData, jobContext });
     if (response.error) throw new Error(response.error);
 
-    const bytes = generateCvDocx(response.tailoredCv);
+    const bytes = generateCvDocx(response.tailoredCv, cvStyle);
     const blob = new Blob([bytes], {
       type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
     });
