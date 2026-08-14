@@ -185,3 +185,7 @@ Chromium doesn't apply its own forced-dark heuristics on top).
   that require login (most of LinkedIn, for instance) or render their content
   via client-side JavaScript will often come back mostly empty. Static pages
   (a personal site, a GitHub profile README) work well.
+
+## License
+
+[MIT](LICENSE)
