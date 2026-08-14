@@ -37,7 +37,7 @@ can:
 
 You bring your own OpenAI or Anthropic (Claude) API key — billed to your own
 account, nothing routes through any third-party server. Full source is
-available on GitHub: <fill in repo URL after creating it>.
+available on GitHub: https://github.com/farhadsh1992/cv-autofill-extension
 
 ## Category
 
