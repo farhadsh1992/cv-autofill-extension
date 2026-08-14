@@ -5,6 +5,7 @@
   "description": "Upload your CV once and auto-fill job application forms using AI. Nothing is ever auto-submitted.",
   "permissions": ["storage", "activeTab", "scripting", "downloads"],
   "host_permissions": ["https://api.openai.com/*", "https://api.anthropic.com/*"],
+  "optional_host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "service_worker": "background.js",
     "scripts": ["background.js"]

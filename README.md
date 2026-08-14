@@ -27,6 +27,21 @@ whatever a given job site needs.
    popup, editable, with **Copy**, **Download PDF** (generated locally in the
    browser — no server involved), and — if a matching "cover letter" field is
    found on the page — **Insert into page field**.
+5. Or click **Generate tailored CV (Word)**. Same job-context scraping, but
+   the model re-emphasizes/reorders your *real* CV content (summary, bullet
+   points, skills) for that specific role — never invents new facts — and it
+   downloads as an actual `.docx` file, built locally (no external library).
+6. **Add info** (popup button) pops open a small window to jot down anything
+   else worth the AI knowing — saved as a resource, same as CV/cover letter.
+7. **Ask AI directly** (popup button) opens a small Q&A window for when
+   autofill couldn't confidently answer something — it uses your saved CV
+   and resources as context and gives you a direct answer to copy in
+   yourself.
+8. **Options → Resources**: add links to your own websites (portfolio,
+   GitHub, personal site) — their text is fetched once (you approve access
+   per-site) and saved as extra context — plus a free-form "About me / notes"
+   field for anything not in your CV. All of this feeds into autofill, cover
+   letters, tailored CVs, and Ask AI answers.
 
 ### What it deliberately won't touch
 
@@ -40,6 +55,9 @@ whatever a given job site needs.
   password field, enforced the same way.
 - The generated cover letter is never auto-inserted without you clicking
   "Insert" yourself, and it's never submitted for you either way.
+- Fetching a resource website requires your explicit one-time permission
+  grant for that specific site (via the browser's own permission prompt) —
+  it's never fetched silently, and only the sites you add are ever touched.
 
 ## Setup
 
@@ -53,6 +71,17 @@ Note this needs a real API key from the provider's developer console, billed
 per call — neither OpenAI nor Anthropic offer a public "log in with your
 ChatGPT/Claude.ai account" flow for third-party extensions like this one, so
 there's no way to reuse a ChatGPT Plus or Claude Pro subscription here.
+
+### Backup folder (Chrome only)
+
+Options also has a **Backup folder** section — pick a folder and every save
+(CV, cover letter, about-me, resources) also gets mirrored there as plain
+files, purely for your own inspection/backup. This uses the File System
+Access API, which only Chrome supports — Safari, Firefox, and Orion (all
+WebKit-based) don't implement it, so the section is disabled there. In every
+browser, including Chrome, the extension always reads from its own internal
+storage — the backup folder is never the source of truth, so nothing breaks
+if you skip it or it's unavailable.
 
 ## Load it in Firefox (development / personal use)
 
@@ -100,13 +129,15 @@ point it at this folder. See [INSTALL.txt](INSTALL.txt) for more detail.
 ## Files
 
 ```
-manifest.json           Manifest V3 config (permissions: storage, activeTab, scripting, downloads)
+manifest.json           Manifest V3 config
 background.js           Service worker — calls OpenAI Responses API or Anthropic Messages API
 shared/blocklist.js     Sensitive-field keyword filter, shared by background + popup
 lib/docx.js             Standalone .docx → plain text extractor (no external library)
 lib/pdf-writer.js       Standalone plain text → PDF writer (no external library)
-popup/                  Toolbar popup UI — "Autofill this page" + "Generate cover letter"
-options/                Provider/API key/model settings, CV upload, cover letter upload
+lib/docx-writer.js      Standalone plain data → .docx writer (no external library)
+popup/                  Toolbar popup UI — autofill, cover letter, tailored CV, add info, ask AI
+options/                Provider/API key/model settings, CV/cover letter upload, resources, backup folder
+windows/                Small popup windows opened from the toolbar popup ("Add info", "Ask AI directly")
 ```
 
 Both `popup/` and `options/` follow the OS/browser color scheme automatically
@@ -128,3 +159,11 @@ Chromium doesn't apply its own forced-dark heuristics on top).
   it handles standard Word/Google Docs/LibreOffice output well, but complex
   layouts (tables, text boxes, multi-column) may lose some structure. If
   extraction looks wrong, paste the text instead.
+- The generated tailored CV `.docx` is a clean, simple, single-style layout —
+  it does not try to reproduce the exact visual formatting of whatever CV
+  file you originally uploaded (fonts, tables, multi-column layouts). It's a
+  content rewrite, not a template clone.
+- Resource website fetching is a plain `fetch()` + HTML-to-text pass — pages
+  that require login (most of LinkedIn, for instance) or render their content
+  via client-side JavaScript will often come back mostly empty. Static pages
+  (a personal site, a GitHub profile README) work well.

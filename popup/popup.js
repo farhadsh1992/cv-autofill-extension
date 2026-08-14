@@ -7,6 +7,9 @@ const coverLetterOutput = document.getElementById("coverLetterOutput");
 const copyBtn = document.getElementById("copyBtn");
 const downloadPdfBtn = document.getElementById("downloadPdfBtn");
 const insertBtn = document.getElementById("insertBtn");
+const generateCvDocxBtn = document.getElementById("generateCvDocxBtn");
+const addInfoBtn = document.getElementById("addInfoBtn");
+const askBtn = document.getElementById("askBtn");
 const statusEl = document.getElementById("status");
 
 openOptionsBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
@@ -31,6 +34,7 @@ function renderSummary(cvData, coverLetterText) {
 
   autofillBtn.disabled = !cvData;
   generateBtn.disabled = !cvData;
+  generateCvDocxBtn.disabled = !cvData;
 }
 
 function setStatus(text, isError = false) {
@@ -43,6 +47,13 @@ generateBtn.addEventListener("click", handleGenerateCoverLetter);
 copyBtn.addEventListener("click", handleCopy);
 downloadPdfBtn.addEventListener("click", handleDownloadPdf);
 insertBtn.addEventListener("click", handleInsert);
+generateCvDocxBtn.addEventListener("click", handleGenerateCvDocx);
+addInfoBtn.addEventListener("click", () => {
+  chrome.windows.create({ url: chrome.runtime.getURL("windows/add-resource.html"), type: "popup", width: 420, height: 460, focused: true });
+});
+askBtn.addEventListener("click", () => {
+  chrome.windows.create({ url: chrome.runtime.getURL("windows/ask.html"), type: "popup", width: 460, height: 520, focused: true });
+});
 
 async function handleAutofill() {
   autofillBtn.disabled = true;
@@ -188,6 +199,49 @@ async function handleDownloadPdf() {
     setStatus("Cover letter downloaded as PDF.");
   } catch (err) {
     setStatus(err.message, true);
+  }
+}
+
+async function handleGenerateCvDocx() {
+  generateCvDocxBtn.disabled = true;
+  try {
+    const { cvData } = await chrome.storage.local.get("cvData");
+    if (!cvData) {
+      setStatus("Upload your CV first.", true);
+      return;
+    }
+
+    setStatus("Reading this page for job context...");
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [{ result: scraped }] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: scrapeJobContextInPage,
+    });
+    const jobContext = [scraped.title, scraped.metaDesc, scraped.bodyText].filter(Boolean).join("\n\n").slice(0, 6000);
+
+    setStatus("Tailoring your CV for this job...");
+    const response = await chrome.runtime.sendMessage({ type: "GENERATE_CV_DOCX", cvData, jobContext });
+    if (response.error) throw new Error(response.error);
+
+    const bytes = generateCvDocx(response.tailoredCv);
+    const blob = new Blob([bytes], {
+      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+    });
+    const url = URL.createObjectURL(blob);
+
+    const namePart = (response.tailoredCv && response.tailoredCv.full_name ? response.tailoredCv.full_name : "CV")
+      .trim()
+      .replace(/\s+/g, "_")
+      .replace(/[^\w-]/g, "");
+    const filename = `${namePart || "CV"}_Tailored_CV.docx`;
+
+    await chrome.downloads.download({ url, filename, saveAs: true });
+    setTimeout(() => URL.revokeObjectURL(url), 60000);
+    setStatus("Tailored CV downloaded as a Word document. Review it before sending.");
+  } catch (err) {
+    setStatus(err.message, true);
+  } finally {
+    generateCvDocxBtn.disabled = false;
   }
 }
 

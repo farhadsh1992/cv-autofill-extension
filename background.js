@@ -28,17 +28,17 @@ Do not invent employers, dates, or credentials that aren't in the document.
 Respond with JSON only — no markdown code fences, no commentary, no text before or after the JSON object.`;
 
 const FIELD_MAP_INSTRUCTIONS = `You are helping a job applicant fill out a web form using their CV data.
-You are given CV_DATA and a list of FORM_FIELDS (each with an "index", a "label", a "type", and for selects a list of "options").
+You are given CV_DATA, ABOUT_ME (free-form notes from the applicant), ADDITIONAL_RESOURCES (extra context from the applicant's own websites/notes), and a list of FORM_FIELDS (each with an "index", a "label", a "type", and for selects a list of "options").
 
 Return a JSON object of the shape: {"answers": [{"index": 0, "value": "..."}, ...]}
 
 Rules:
-- Only include a field in "answers" if you are genuinely confident about the value from CV_DATA, or it's a short, honest answer that can be reasonably derived from CV_DATA (e.g. a brief "why am I a good fit" using the summary/skills).
+- Only include a field in "answers" if you are genuinely confident about the value from CV_DATA/ABOUT_ME/ADDITIONAL_RESOURCES, or it's a short, honest answer that can be reasonably derived from them (e.g. a brief "why am I a good fit" using the summary/skills).
 - For select/dropdown fields, "value" must exactly match one of that field's provided "options" strings.
 - Never fabricate personal demographic information: gender, race, ethnicity, veteran status, disability status, or sexual orientation. Omit those fields entirely — leave them for the applicant.
 - Never fill salary expectations, government ID numbers, payment details, or passwords. Omit those fields entirely.
 - Skip any field you are not confident about rather than guessing. It is fine to leave many fields unanswered.
-- Keep free-text answers concise (2-4 sentences max) and grounded only in CV_DATA. Do not invent facts not present in CV_DATA.
+- Keep free-text answers concise (2-4 sentences max) and grounded only in the given information. Do not invent facts.
 Respond with JSON only — no markdown code fences, no commentary, no text before or after the JSON object.`;
 
 const COVER_LETTER_EXTRACT_PROMPT = `Extract the full text of this cover letter as faithfully as possible, preserving paragraph breaks. Do not summarize or comment on it.
@@ -53,6 +53,62 @@ You are given:
 Write a new cover letter grounded only in facts from CV_DATA — never invent employers, dates, skills, or achievements that aren't in CV_DATA. Keep it concise (250-400 words), professional, and specific to the role in JOB_CONTEXT where the context allows it. If JOB_CONTEXT is missing or unhelpful, write a solid general-purpose letter from CV_DATA instead of inventing job details.
 
 Respond as JSON: {"cover_letter": "..."}. Respond with JSON only — no markdown code fences, no commentary.`;
+
+const CV_TAILOR_PROMPT = `You are helping a job applicant tailor their CV/resume for a specific job posting.
+You are given CV_DATA (structured JSON), JOB_CONTEXT (text scraped from a job posting page — may be incomplete or missing), ABOUT_ME (free-form notes from the applicant), and ADDITIONAL_RESOURCES (extra context from the applicant's own websites/notes).
+
+Produce a tailored version of the CV as JSON with exactly this shape:
+{
+  "full_name": "",
+  "email": "",
+  "phone": "",
+  "location": "",
+  "linkedin": "",
+  "github": "",
+  "portfolio": "",
+  "summary": "",
+  "work_experience": [{"title": "", "company": "", "start": "", "end": "", "bullets": ["", "..."]}],
+  "education": [{"degree": "", "institution": "", "start": "", "end": ""}],
+  "skills": []
+}
+
+Rules:
+- Never invent employers, dates, titles, or achievements that aren't in CV_DATA, ABOUT_ME, or ADDITIONAL_RESOURCES. This is a rewrite/re-emphasis of real facts, not fiction.
+- You may reorder or trim skills, and rewrite the summary to speak directly to the role in JOB_CONTEXT.
+- Convert each role's experience into 2-4 concise, achievement-oriented "bullets" (rewrite any prose-style description into bullet points).
+- If JOB_CONTEXT is missing or unhelpful, produce a solid general-purpose tailored CV instead of inventing job specifics.
+
+Respond with JSON only — no markdown code fences, no commentary.`;
+
+const ASK_PROMPT = `You are helping a job applicant who is filling out a job application form and got stuck on a question the automatic form-filler couldn't confidently answer.
+You are given CV_DATA, ABOUT_ME, ADDITIONAL_RESOURCES, and the applicant's QUESTION.
+
+Answer the question directly and concisely, grounded only in the given information. If you don't have enough information to answer factually, say so plainly rather than guessing or inventing facts — the applicant will fill in the real answer themselves.
+
+Respond as JSON: {"answer": "..."}. Respond with JSON only — no markdown code fences, no commentary.`;
+
+// Caps keep prompts (and cost) bounded even if the applicant saves a lot of resources.
+const MAX_RESOURCES_IN_CONTEXT = 8;
+const MAX_RESOURCE_CHARS = 1500;
+
+async function buildContextBlock() {
+  const { resources = [], aboutMeText } = await chrome.storage.local.get(["resources", "aboutMeText"]);
+  const parts = [`ABOUT_ME:\n${(aboutMeText || "").trim() || "(none provided)"}`];
+
+  if (resources.length) {
+    const recent = resources.slice(-MAX_RESOURCES_IN_CONTEXT);
+    const items = recent.map((r) => {
+      const header = r.url ? `${r.label || r.url} (${r.url})` : r.label || "Note";
+      const content = (r.content || "").slice(0, MAX_RESOURCE_CHARS);
+      return `- ${header}:\n${content}`;
+    });
+    parts.push(`ADDITIONAL_RESOURCES:\n${items.join("\n\n")}`);
+  } else {
+    parts.push(`ADDITIONAL_RESOURCES:\n(none provided)`);
+  }
+
+  return parts.join("\n\n");
+}
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg.type === "PARSE_CV") {
@@ -75,6 +131,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg.type === "GENERATE_COVER_LETTER") {
     handleGenerateCoverLetter(msg)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (msg.type === "GENERATE_CV_DOCX") {
+    handleGenerateCvDocx(msg)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (msg.type === "ASK_LLM") {
+    handleAskLlm(msg)
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
     return true;
@@ -196,7 +264,8 @@ async function handleParseCV({ isPdf, base64, text }) {
 
 async function handleMapFields({ fields, cvData }) {
   const safeFields = fields.filter((f) => !isSensitiveField(f.label));
-  const prompt = `${FIELD_MAP_INSTRUCTIONS}\n\nCV_DATA:\n${JSON.stringify(cvData)}\n\nFORM_FIELDS:\n${JSON.stringify(safeFields)}`;
+  const context = await buildContextBlock();
+  const prompt = `${FIELD_MAP_INSTRUCTIONS}\n\n${context}\n\nCV_DATA:\n${JSON.stringify(cvData)}\n\nFORM_FIELDS:\n${JSON.stringify(safeFields)}`;
 
   const result = await callAI([{ type: "text", text: prompt }]);
 
@@ -225,7 +294,10 @@ async function handleSaveCoverLetter({ isPdf, base64, text }) {
 }
 
 async function handleGenerateCoverLetter({ cvData, coverLetterText, jobContext }) {
+  const context = await buildContextBlock();
   const prompt = `${COVER_LETTER_WRITE_PROMPT}
+
+${context}
 
 CV_DATA:
 ${JSON.stringify(cvData)}
@@ -238,4 +310,37 @@ ${jobContext || "(not available)"}`;
 
   const result = await callAI([{ type: "text", text: prompt }]);
   return { coverLetter: (result.cover_letter || "").trim() };
+}
+
+async function handleGenerateCvDocx({ cvData, jobContext }) {
+  const context = await buildContextBlock();
+  const prompt = `${CV_TAILOR_PROMPT}
+
+${context}
+
+CV_DATA:
+${JSON.stringify(cvData)}
+
+JOB_CONTEXT:
+${jobContext || "(not available)"}`;
+
+  const tailoredCv = await callAI([{ type: "text", text: prompt }]);
+  return { tailoredCv };
+}
+
+async function handleAskLlm({ cvData, question }) {
+  if (!question || !question.trim()) throw new Error("Type a question first.");
+  const context = await buildContextBlock();
+  const prompt = `${ASK_PROMPT}
+
+${context}
+
+CV_DATA:
+${JSON.stringify(cvData || {})}
+
+QUESTION:
+${question.trim()}`;
+
+  const result = await callAI([{ type: "text", text: prompt }]);
+  return { answer: (result.answer || "").trim() };
 }

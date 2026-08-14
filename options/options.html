@@ -113,6 +113,58 @@
       </div>
     </section>
 
+    <hr />
+
+    <section>
+      <h2>About me / notes</h2>
+      <p class="muted">
+        Free-form background the AI can draw on — things not in your CV, availability,
+        preferences, whatever's useful. Used the same way as your CV when filling forms,
+        writing cover letters, and answering questions in the popup.
+      </p>
+      <textarea id="aboutMeText" rows="6" placeholder="Anything else worth the AI knowing about you"></textarea>
+      <div class="row">
+        <button id="saveAboutMe">Save</button>
+        <button id="clearAboutMe" class="secondary">Clear</button>
+        <span id="aboutMeStatus" class="muted"></span>
+      </div>
+    </section>
+
+    <hr />
+
+    <section>
+      <h2>Resources</h2>
+      <p class="muted">
+        Add links to your own websites (portfolio, GitHub, personal site) — their text
+        content is fetched once and saved as extra context. You'll be asked to approve
+        access to each site the first time. Notes added from the popup's "Add info"
+        button land here too.
+      </p>
+      <div class="row">
+        <input type="text" id="resourceUrl" placeholder="https://your-site.com" style="flex: 1" />
+        <button id="addResourceUrl">Fetch &amp; add</button>
+      </div>
+      <div id="resourceUrlStatus" class="muted"></div>
+      <div id="resourceList" class="resourceList"></div>
+    </section>
+
+    <hr />
+
+    <section id="backupSection">
+      <h2>Backup folder <span class="muted">(Chrome only)</span></h2>
+      <p class="muted" id="backupIntro">
+        Optionally mirror your CV, cover letter, notes, and resources to a folder on
+        disk as plain files, purely as your own backup/inspection copy. The extension
+        always keeps working from its normal internal storage in every browser —
+        this is an extra copy, not a replacement.
+      </p>
+      <div class="row">
+        <button id="chooseBackupFolder" class="secondary">Choose folder</button>
+        <button id="forgetBackupFolder" class="secondary hidden">Forget folder</button>
+        <span id="backupStatus" class="muted"></span>
+      </div>
+    </section>
+
     <script src="../lib/docx.js"></script>
     <script src="options.js"></script>
   </body>

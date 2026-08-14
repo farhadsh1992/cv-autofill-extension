@@ -89,8 +89,20 @@ AFTER INSTALLING (any browser)
    clicks Submit itself.
 6. Or click "Generate cover letter for this page" to get a new draft
    tailored to that job, grounded in your CV and written in the voice of
-   your saved reference letter. Edit it in the popup, then Copy it or
-   click "Insert into page field" if the extension found a matching field.
+   your saved reference letter. Edit it in the popup, then Copy it,
+   "Download PDF", or click "Insert into page field" if found.
+7. Or click "Generate tailored CV (Word)" to download a .docx CV with your
+   real content re-emphasized for that specific job (never invents facts).
+8. In Options, under "Resources", add links to your own websites (fetched
+   once, with your permission per site) and free-form "About me" notes —
+   both get used as extra context everywhere the AI is involved. The
+   popup's "Add info" button opens a small window for jotting down more
+   of the same on the fly.
+9. Stuck on a question autofill couldn't answer? Click "Ask AI directly"
+   in the popup for a quick, CV-grounded answer you can paste in yourself.
+10. (Chrome only) Options > Backup folder lets you mirror all of the above
+    to a folder on disk as plain files, purely as your own backup copy —
+    the extension keeps working from its own storage either way.
 
 The popup and Options page both follow your OS/browser's light or dark
 appearance automatically — no setting to toggle.

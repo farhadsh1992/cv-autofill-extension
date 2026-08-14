@@ -157,3 +157,51 @@ code {
   padding: 1px 4px;
   border-radius: 4px;
 }
+
+.hidden {
+  display: none;
+}
+
+.resourceList {
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.resourceItem {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  background: var(--panel);
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 10px;
+}
+
+.resourceItem .resourceMeta {
+  font-size: 12px;
+  min-width: 0;
+}
+
+.resourceItem .resourceLabel {
+  font-weight: 600;
+  word-break: break-word;
+}
+
+.resourceItem .resourcePreview {
+  color: var(--muted);
+  margin-top: 2px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.resourceItem button {
+  flex-shrink: 0;
+  padding: 4px 10px;
+  font-size: 12px;
+}

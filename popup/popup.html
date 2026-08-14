@@ -30,10 +30,24 @@
       </div>
     </section>
 
+    <section id="cvDocxSection">
+      <button id="generateCvDocxBtn" disabled>Generate tailored CV (Word)</button>
+      <p class="muted small">Re-emphasizes your real CV content for this job — downloads as a .docx.</p>
+    </section>
+
+    <section id="extrasSection">
+      <div class="row">
+        <button id="addInfoBtn" class="secondary">Add info</button>
+        <button id="askBtn" class="secondary">Ask AI directly</button>
+      </div>
+      <p class="muted small">Ask AI directly is for questions autofill couldn't confidently answer.</p>
+    </section>
+
     <div id="status" class="status"></div>
 
     <script src="../shared/blocklist.js"></script>
     <script src="../lib/pdf-writer.js"></script>
+    <script src="../lib/docx-writer.js"></script>
     <script src="popup.js"></script>
   </body>
 </html>
