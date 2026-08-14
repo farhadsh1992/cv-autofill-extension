@@ -72,7 +72,7 @@ WebExtensions to be wrapped in a native app/Xcode project. Apple provides a
 converter for exactly this:
 
 ```bash
-xcrun safari-web-extension-converter /Users/farhad/Documents/VisTeamPro/Programming11/Learning_AI_Agents/agents2/cv_autofill_extension
+xcrun safari-web-extension-converter [path of app]
 ```
 
 This generates an Xcode project wrapping the extension. Then:
