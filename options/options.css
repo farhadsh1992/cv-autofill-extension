@@ -58,9 +58,9 @@ h1 {
 }
 
 .pageLogo {
-  width: 64px;
-  height: 64px;
-  border-radius: 12px;
+  width: 112px;
+  height: 112px;
+  border-radius: 16px;
   flex-shrink: 0;
 }
 
