@@ -48,6 +48,79 @@ h1 {
   font-size: 20px;
 }
 
+.pageHeader {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.pageLogo {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  flex-shrink: 0;
+}
+
+.pageHeader h1 {
+  margin: 0;
+}
+
+.tabBar {
+  display: flex;
+  gap: 4px;
+  margin: 16px 0 24px;
+  border-bottom: 1px solid var(--border);
+}
+
+.tabBtn {
+  background: none;
+  border: none;
+  border-bottom: 2px solid transparent;
+  border-radius: 0;
+  padding: 8px 14px;
+  font-size: 13px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+.tabBtn:hover {
+  background: var(--panel-hover);
+  color: var(--fg);
+}
+
+.tabBtn.active {
+  color: var(--accent);
+  border-bottom-color: var(--accent);
+  font-weight: 600;
+}
+
+.tabPanel {
+  display: none;
+}
+
+.tabPanel.active {
+  display: block;
+}
+
+.radioRow {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  color: var(--fg);
+}
+
+input[type="color"] {
+  width: 44px;
+  height: 32px;
+  padding: 2px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--textarea-bg);
+  cursor: pointer;
+}
+
 h2 {
   font-size: 14px;
   text-transform: uppercase;

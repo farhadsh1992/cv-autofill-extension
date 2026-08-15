@@ -1,3 +1,5 @@
+<img src="icon-design/logo_source.png" alt="Farhad's CV AutoFill logo" width="160" />
+
 # Farhad's CV AutoFill
 
 A Firefox/Safari/Orion WebExtension that parses your CV once, then auto-fills
@@ -78,6 +80,24 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
 - Fetching a resource website requires your explicit one-time permission
   grant for that specific site (via the browser's own permission prompt) —
   it's never fetched silently, and only the sites you add are ever touched.
+
+## Options page layout
+
+The Options page is split into three tabs: **Appearance**, **AI**, and
+**Info**.
+
+- **Appearance** — Theme (System/Light/Dark, overriding your OS everywhere
+  in the extension — popup, options, and the small windows) and Button color
+  (a color picker for the accent color used on buttons and links). Both
+  apply instantly and save automatically, no Save button needed.
+- **AI** — everything about providers: the estimated spend counter, the four
+  providers' API keys/models, which one is active, and **Model per action**
+  — optionally send autofill, CV rebuilding, and cover letter rebuilding to
+  different providers instead of all sharing the one "active" choice (e.g.
+  a cheap model for autofill, a stronger one for rewriting your CV). Each
+  defaults to "Active provider" until set otherwise.
+- **Info** — your CV, cover letter, About Me notes, addresses, resources,
+  and backup export/import. Everything the AI draws on as context.
 
 ## Setup
 
@@ -179,12 +199,14 @@ point it at this folder. See [INSTALL.txt](INSTALL.txt) for more detail.
 manifest.json           Manifest V3 config
 background.js           Service worker — calls OpenAI/Anthropic/Kimi/Gemini APIs, tracks estimated spend
 shared/blocklist.js     Sensitive-field keyword filter, shared by background + popup
+shared/theme.js         Applies manual theme/accent-color overrides on every page
 lib/docx.js             Standalone .docx → plain text/style extractor (no external library)
 lib/pdf-writer.js       Standalone plain text → PDF writer (no external library)
 lib/docx-writer.js      Standalone plain data → .docx writer, with optional photo/color (no external library)
 popup/                  Toolbar popup UI — autofill, cover letter, tailored CV, add info, ask AI
-options/                Provider/API key/model settings, spend estimate, CV/cover letter upload,
-                        about me, addresses, resources, export/import backup
+options/                Appearance/AI/Info tabs — theme & color, provider keys & per-action model
+                        routing & spend estimate, CV/cover letter upload, about me, addresses,
+                        resources, export/import backup
 windows/                Small popup windows opened from the toolbar popup ("Add info", "Ask AI directly")
 ```
 

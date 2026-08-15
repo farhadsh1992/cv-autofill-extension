@@ -72,48 +72,55 @@ developer/advanced settings toggle in the Extensions section.
 AFTER INSTALLING (any browser)
 --------------------------------
 1. Click the extension icon, then open its Options page (gear icon in the
-   popup, or via the browser's extension management page).
-2. Add an API key for as many of the four supported providers as you want
-   (OpenAI, Anthropic/Claude, Kimi/Moonshot, Gemini/Google) — they're all
-   kept ready to use — then pick which one is active with the "Currently
-   using" dropdown at the top. None of them offer a "log in with your
-   account" flow for third-party extensions — you need a real API key from
-   each provider's own developer console, billed per call, separate from
-   any consumer chat subscription.
+   popup, or via the browser's extension management page). It's split into
+   three tabs: Appearance, AI, and Info.
+2. In the Appearance tab: pick System/Light/Dark to override your OS theme
+   everywhere in the extension, and/or pick a custom button color — both
+   apply and save instantly, no Save button needed.
+3. Switch to the AI tab. Add an API key for as many of the four supported
+   providers as you want (OpenAI, Anthropic/Claude, Kimi/Moonshot,
+   Gemini/Google) — they're all kept ready to use — then pick which one is
+   active with the "Currently using" dropdown. None of them offer a "log in
+   with your account" flow for third-party extensions — you need a real API
+   key from each provider's own developer console, billed per call, separate
+   from any consumer chat subscription.
      OpenAI key:    https://platform.openai.com/api-keys
      Anthropic key: https://console.anthropic.com/settings/keys
      Kimi key:      https://platform.moonshot.ai/console/api-keys
      Gemini key:    https://aistudio.google.com/apikey
    Note: Kimi can't read uploaded PDF files — use OpenAI/Anthropic/Gemini
    as active for CV/cover letter/document PDF uploads.
-3. Paste each key into its matching field and pick a model (defaults:
-   gpt-4o-mini, claude-sonnet-5, kimi-k2.5, gemini-3.5-flash). Click Save.
-   The top of the page shows a running estimated spend across all four,
-   based on published per-token pricing — check your provider's own
-   dashboard for your actual bill.
-4. Still in Options, upload your CV (PDF, Word .docx, or paste text) once,
-   and optionally a past cover letter too (same file types) — it's used
-   only as a style/tone reference, never sent to any job site as-is.
-5. On any job application page, open the popup and click "Autofill this
+4. Paste each key into its matching field and pick a model (defaults:
+   gpt-4o-mini, claude-sonnet-5, kimi-k2.5, gemini-3.5-flash). Optionally,
+   under "Model per action", send autofill/CV rebuilding/cover letter
+   rebuilding to different providers instead of all sharing the active one.
+   Click Save. The top of this tab shows a running estimated spend across
+   all four, based on published per-token pricing — check your provider's
+   own dashboard for your actual bill.
+5. Switch to the Info tab and upload your CV (PDF, Word .docx, or paste
+   text) once, and optionally a past cover letter too (same file types) —
+   it's used only as a style/tone reference, never sent to any job site
+   as-is.
+6. On any job application page, open the popup and click "Autofill this
    page". Review everything it fills in before you submit — it never
    clicks Submit itself.
-6. Or click "Generate cover letter for this page" to get a new draft
+7. Or click "Generate cover letter for this page" to get a new draft
    tailored to that job, grounded in your CV and written in the voice of
    your saved reference letter. Edit it in the popup, then Copy it,
    "Download PDF", or click "Insert into page field" if found.
-7. Or click "Generate tailored CV (Word)" to download a .docx CV with your
+8. Or click "Generate tailored CV (Word)" to download a .docx CV with your
    real content re-emphasized for that specific job (never invents facts).
-8. In Options, under "About me / notes", add as many labeled notes as you
-   want, or upload a PDF/.docx/.txt file (a diploma, certificate, etc.) to
-   have its text saved as a labeled note automatically. Under "Addresses",
-   add labeled physical addresses (home, mailing, etc.) for address-shaped
-   form fields. Under "Resources", add links to your own websites (fetched
-   once, with your permission per site). All of this feeds into everywhere
-   the AI is involved. The popup's "Add info" button opens a small window
-   for jotting down more of the same on the fly.
-9. Stuck on a question autofill couldn't answer? Click "Ask AI directly"
-   in the popup for a quick, CV-grounded answer you can paste in yourself.
-10. Options > Backup: "Export backup" downloads a single JSON snapshot of
+9. In the Info tab, under "About me / notes", add as many labeled notes as
+   you want, or upload a PDF/.docx/.txt file (a diploma, certificate, etc.)
+   to have its text saved as a labeled note automatically. Under
+   "Addresses", add labeled physical addresses (home, mailing, etc.) for
+   address-shaped form fields. Under "Resources", add links to your own
+   websites (fetched once, with your permission per site). All of this
+   feeds into everywhere the AI is involved. The popup's "Add info" button
+   opens a small window for jotting down more of the same on the fly.
+10. Stuck on a question autofill couldn't answer? Click "Ask AI directly"
+    in the popup for a quick, CV-grounded answer you can paste in yourself.
+11. Info tab > Backup: "Export backup" downloads a single JSON snapshot of
     all of the above, including your saved API keys, so "Import backup" on
     a fresh install or new browser can restore everything at once. This
     file contains your API keys in plain text — keep it private, never
@@ -121,4 +128,5 @@ AFTER INSTALLING (any browser)
     its own internal storage either way; a backup file is just a copy.
 
 The popup and Options page both follow your OS/browser's light or dark
-appearance automatically — no setting to toggle.
+appearance automatically, unless you've overridden it in Options →
+Appearance.

@@ -1,4 +1,18 @@
+const tabBtns = document.querySelectorAll(".tabBtn");
+const tabPanels = document.querySelectorAll(".tabPanel");
+
+const themeRadios = document.querySelectorAll('input[name="theme"]');
+const accentColorInput = document.getElementById("accentColor");
+const resetAccentBtn = document.getElementById("resetAccentBtn");
+const DEFAULT_ACCENT_COLOR = "#0a84ff";
+
 const activeProviderSelect = document.getElementById("activeProvider");
+
+const taskProviderSelects = {
+  autofill: document.getElementById("taskProviderAutofill"),
+  tailorCv: document.getElementById("taskProviderTailorCv"),
+  coverLetter: document.getElementById("taskProviderCoverLetter"),
+};
 
 const PROVIDER_FIELD_IDS = {
   openai: { apiKey: "openaiApiKey", showKey: "showOpenaiKey", model: "openaiModel" },
@@ -66,12 +80,24 @@ const addResourceUrlBtn = document.getElementById("addResourceUrl");
 const resourceUrlStatus = document.getElementById("resourceUrlStatus");
 const resourceListEl = document.getElementById("resourceList");
 
+// ---- Tabs ----
+
+for (const btn of tabBtns) {
+  btn.addEventListener("click", () => {
+    for (const b of tabBtns) b.classList.toggle("active", b === btn);
+    for (const panel of tabPanels) panel.classList.toggle("active", panel.id === `tab-${btn.dataset.tab}`);
+  });
+}
+
 init();
 
 async function init() {
   const stored = await chrome.storage.local.get([
     "providers",
     "activeProvider",
+    "taskProviders",
+    "theme",
+    "accentColor",
     "cvData",
     "cvStyle",
     "coverLetterText",
@@ -89,6 +115,15 @@ async function init() {
     "apiKey",
     "model",
   ]);
+
+  const theme = stored.theme || "system";
+  for (const radio of themeRadios) radio.checked = radio.value === theme;
+  accentColorInput.value = stored.accentColor || DEFAULT_ACCENT_COLOR;
+
+  const taskProviders = stored.taskProviders || {};
+  for (const [task, select] of Object.entries(taskProviderSelects)) {
+    select.value = taskProviders[task] || "";
+  }
 
   let providers = stored.providers;
   let activeProvider = stored.activeProvider;
@@ -137,6 +172,23 @@ for (const fields of Object.values(providerFields)) {
   });
 }
 
+// ---- Appearance ----
+
+for (const radio of themeRadios) {
+  radio.addEventListener("change", () => {
+    if (radio.checked) chrome.storage.local.set({ theme: radio.value });
+  });
+}
+
+accentColorInput.addEventListener("input", () => {
+  chrome.storage.local.set({ accentColor: accentColorInput.value });
+});
+
+resetAccentBtn.addEventListener("click", () => {
+  accentColorInput.value = DEFAULT_ACCENT_COLOR;
+  chrome.storage.local.remove("accentColor");
+});
+
 function looksLikeUrl(value) {
   return value.includes("://");
 }
@@ -152,7 +204,12 @@ saveBtn.addEventListener("click", async () => {
     providers[id] = { apiKey, model: fields.modelSelect.value };
   }
 
-  await chrome.storage.local.set({ providers, activeProvider: activeProviderSelect.value });
+  const taskProviders = {};
+  for (const [task, select] of Object.entries(taskProviderSelects)) {
+    taskProviders[task] = select.value;
+  }
+
+  await chrome.storage.local.set({ providers, activeProvider: activeProviderSelect.value, taskProviders });
   flash(saveStatus, "Saved.");
 });
 
@@ -653,6 +710,9 @@ function textToDataUrl(text, mimeType) {
 const BACKUP_KEYS = [
   "providers",
   "activeProvider",
+  "taskProviders",
+  "theme",
+  "accentColor",
   "cvData",
   "cvStyle",
   "coverLetterText",

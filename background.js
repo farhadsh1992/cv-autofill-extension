@@ -220,14 +220,15 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 });
 
-async function getSettings() {
+async function getSettings(providerOverride) {
   const { providers = {}, activeProvider = "openai" } = await chrome.storage.local.get(["providers", "activeProvider"]);
-  const cfg = providers[activeProvider] || {};
+  const provider = providerOverride || activeProvider;
+  const cfg = providers[provider] || {};
   const apiKey = cfg.apiKey;
-  const providerName = PROVIDER_LABELS[activeProvider] || activeProvider;
+  const providerName = PROVIDER_LABELS[provider] || provider;
   if (!apiKey) {
     throw new Error(
-      `No ${providerName} API key set. Add one on the extension's Options page, or switch the active provider to one you've already set up.`
+      `No ${providerName} API key set. Add one on the extension's Options page, or switch the active/task provider to one you've already set up.`
     );
   }
   if (apiKey.includes("://")) {
@@ -235,13 +236,15 @@ async function getSettings() {
       `The saved ${providerName} API key looks like a URL, not an API key (it contains "://"). Go to Options and re-paste the actual key from the provider's site.`
     );
   }
-  const model = cfg.model || DEFAULT_MODELS[activeProvider];
-  return { provider: activeProvider, apiKey, model };
+  const model = cfg.model || DEFAULT_MODELS[provider];
+  return { provider, apiKey, model };
 }
 
 // `parts` is a provider-agnostic content list: {type:"text", text} | {type:"pdf", base64}
-async function callAI(parts) {
-  const { provider, apiKey, model } = await getSettings();
+// `providerOverride` lets a specific action (autofill/tailor CV/cover letter) use a
+// provider other than the general "active" one, per its own Options setting.
+async function callAI(parts, providerOverride) {
+  const { provider, apiKey, model } = await getSettings(providerOverride);
   const hasDocument = parts.some((p) => p.type === "pdf");
   if (hasDocument && !DOCUMENT_CAPABLE_PROVIDERS.includes(provider)) {
     throw new Error(
@@ -439,7 +442,8 @@ async function handleMapFields({ fields, cvData }) {
   const context = await buildContextBlock();
   const prompt = `${FIELD_MAP_INSTRUCTIONS}\n\n${context}\n\nCV_DATA:\n${JSON.stringify(cvData)}\n\nFORM_FIELDS:\n${JSON.stringify(safeFields)}`;
 
-  const result = await callAI([{ type: "text", text: prompt }]);
+  const { taskProviders = {} } = await chrome.storage.local.get("taskProviders");
+  const result = await callAI([{ type: "text", text: prompt }], taskProviders.autofill);
 
   const fieldByIndex = new Map(fields.map((f) => [f.index, f]));
   const answers = (result.answers || []).filter((a) => {
@@ -488,7 +492,8 @@ ${coverLetterText || "(none provided — write in a clear, professional default 
 JOB_CONTEXT:
 ${jobContext || "(not available)"}`;
 
-  const result = await callAI([{ type: "text", text: prompt }]);
+  const { taskProviders = {} } = await chrome.storage.local.get("taskProviders");
+  const result = await callAI([{ type: "text", text: prompt }], taskProviders.coverLetter);
   return { coverLetter: (result.cover_letter || "").trim() };
 }
 
@@ -504,7 +509,8 @@ ${JSON.stringify(cvData)}
 JOB_CONTEXT:
 ${jobContext || "(not available)"}`;
 
-  const tailoredCv = await callAI([{ type: "text", text: prompt }]);
+  const { taskProviders = {} } = await chrome.storage.local.get("taskProviders");
+  const tailoredCv = await callAI([{ type: "text", text: prompt }], taskProviders.tailorCv);
   return { tailoredCv };
 }
 

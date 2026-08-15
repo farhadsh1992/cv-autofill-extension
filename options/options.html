@@ -6,283 +6,356 @@
     <link rel="stylesheet" href="options.css" />
   </head>
   <body>
-    <h1>Farhad's CV AutoFill — Options</h1>
+    <header class="pageHeader">
+      <img src="../icons/icon-48.png" alt="" class="pageLogo" />
+      <h1>Farhad's CV AutoFill — Options</h1>
+    </header>
 
-    <section id="spendSection">
-      <h2>Estimated spend</h2>
-      <p class="muted">
-        A running total across all four providers below, estimated from each
-        model's published price per token. This is not a real invoice — check
-        your provider's own billing dashboard for what you're actually
-        charged.
-      </p>
-      <div class="row" style="align-items: baseline">
-        <span id="totalSpent" style="font-size: 1.4em; font-weight: 600">$0.0000</span>
-        <button id="resetSpendBtn" class="secondary">Reset counter</button>
-      </div>
-      <div id="spendByProvider" class="muted" style="margin-top: 6px"></div>
-    </section>
+    <nav class="tabBar">
+      <button class="tabBtn active" data-tab="appearance">Appearance</button>
+      <button class="tabBtn" data-tab="ai">AI</button>
+      <button class="tabBtn" data-tab="info">Info</button>
+    </nav>
 
-    <hr />
+    <!-- ==================== Appearance ==================== -->
+    <div class="tabPanel active" id="tab-appearance">
+      <section>
+        <h2>Theme</h2>
+        <p class="muted">Follows your OS by default — pick Light or Dark to override that everywhere in this extension (popup, options, and the small windows).</p>
+        <div class="row">
+          <label class="radioRow"><input type="radio" name="theme" value="system" /> System</label>
+          <label class="radioRow"><input type="radio" name="theme" value="light" /> Light</label>
+          <label class="radioRow"><input type="radio" name="theme" value="dark" /> Dark</label>
+        </div>
+      </section>
 
-    <section>
-      <h2>AI provider</h2>
-      <p class="muted">
-        None of these offer a public "log in with your account" flow for
-        third-party extensions like this one — their consumer chat subscriptions
-        are separate from their developer APIs. An API key (billed per call) is
-        the supported way to connect. Add a key for as many providers as you
-        want below — they're all kept ready to use — then pick which one is
-        active right now.
-      </p>
-      <label class="muted" for="activeProvider" style="display: block; margin-bottom: 4px">Currently using</label>
-      <select id="activeProvider">
-        <option value="openai">OpenAI</option>
-        <option value="anthropic">Anthropic (Claude)</option>
-        <option value="kimi">Kimi (Moonshot)</option>
-        <option value="gemini">Gemini (Google)</option>
-      </select>
-      <p class="muted" style="margin-top: 6px">
-        Kimi doesn't support reading uploaded PDF files directly — for CV/cover
-        letter/document PDF uploads, switch to OpenAI, Anthropic, or Gemini first.
-      </p>
-    </section>
+      <hr />
 
-    <details open>
-      <summary>OpenAI API key</summary>
-      <p class="muted">
-        Stored only in this browser's local extension storage — never sent anywhere
-        except directly to <code>api.openai.com</code>. Get one at
-        <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.
-      </p>
-      <input type="password" id="openaiApiKey" placeholder="sk-..." autocomplete="off" />
-      <label class="checkboxRow"><input type="checkbox" id="showOpenaiKey" /> Show key</label>
-      <select id="openaiModel">
-        <option value="gpt-4o-mini">gpt-4o-mini (default, fastest/cheapest)</option>
-        <option value="gpt-4o">gpt-4o</option>
-        <option value="gpt-4.1-mini">gpt-4.1-mini</option>
-        <option value="gpt-4.1">gpt-4.1</option>
-      </select>
-    </details>
-
-    <details>
-      <summary>Anthropic (Claude) API key</summary>
-      <p class="muted">
-        Stored only in this browser's local extension storage — never sent anywhere
-        except directly to <code>api.anthropic.com</code>. Get one at
-        <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a>.
-      </p>
-      <input type="password" id="anthropicApiKey" placeholder="sk-ant-..." autocomplete="off" />
-      <label class="checkboxRow"><input type="checkbox" id="showAnthropicKey" /> Show key</label>
-      <select id="anthropicModel">
-        <option value="claude-sonnet-5">claude-sonnet-5 (default, balanced)</option>
-        <option value="claude-opus-5">claude-opus-5 (most capable)</option>
-        <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (fastest/cheapest)</option>
-      </select>
-    </details>
-
-    <details>
-      <summary>Kimi (Moonshot) API key</summary>
-      <p class="muted">
-        Stored only in this browser's local extension storage — never sent anywhere
-        except directly to <code>api.moonshot.ai</code>. Get one at
-        <a href="https://platform.moonshot.ai/console/api-keys" target="_blank" rel="noopener">platform.moonshot.ai/console/api-keys</a>.
-        (If your account is on Moonshot's mainland-China platform instead, its
-        keys are issued for <code>api.moonshot.cn</code> and won't work here.)
-      </p>
-      <input type="password" id="kimiApiKey" placeholder="sk-..." autocomplete="off" />
-      <label class="checkboxRow"><input type="checkbox" id="showKimiKey" /> Show key</label>
-      <select id="kimiModel">
-        <option value="kimi-k2.5">kimi-k2.5 (default, cheapest)</option>
-        <option value="kimi-k3">kimi-k3 (most capable)</option>
-      </select>
-    </details>
-
-    <details>
-      <summary>Gemini (Google) API key</summary>
-      <p class="muted">
-        Stored only in this browser's local extension storage — never sent anywhere
-        except directly to <code>generativelanguage.googleapis.com</code>. Get one at
-        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.
-      </p>
-      <input type="password" id="geminiApiKey" placeholder="AIza..." autocomplete="off" />
-      <label class="checkboxRow"><input type="checkbox" id="showGeminiKey" /> Show key</label>
-      <select id="geminiModel">
-        <option value="gemini-3.5-flash">gemini-3.5-flash (default, fastest/cheapest)</option>
-        <option value="gemini-3.1-pro">gemini-3.1-pro (most capable)</option>
-      </select>
-    </details>
-
-    <div class="row" style="margin-top: 12px">
-      <button id="save">Save</button>
-      <span id="saveStatus" class="muted"></span>
+      <section>
+        <h2>Button color</h2>
+        <p class="muted">Changes the accent color used for buttons and links throughout the extension.</p>
+        <div class="row" style="align-items: center">
+          <input type="color" id="accentColor" value="#0a84ff" />
+          <button id="resetAccentBtn" class="secondary">Reset to default</button>
+        </div>
+      </section>
     </div>
 
-    <hr />
+    <!-- ==================== AI ==================== -->
+    <div class="tabPanel" id="tab-ai">
+      <section id="spendSection">
+        <h2>Estimated spend</h2>
+        <p class="muted">
+          A running total across all four providers below, estimated from each
+          model's published price per token. This is not a real invoice — check
+          your provider's own billing dashboard for what you're actually
+          charged.
+        </p>
+        <div class="row" style="align-items: baseline">
+          <span id="totalSpent" style="font-size: 1.4em; font-weight: 600">$0.0000</span>
+          <button id="resetSpendBtn" class="secondary">Reset counter</button>
+        </div>
+        <div id="spendByProvider" class="muted" style="margin-top: 6px"></div>
+      </section>
 
-    <section>
-      <h2>Your CV</h2>
-      <p class="muted">Upload a PDF or Word (.docx) file, or paste plain text. Re-uploading replaces the saved CV.</p>
-      <div class="row">
-        <label class="fileBtn">
-          Upload PDF / .docx / .txt
-          <input type="file" id="cvFile" accept=".pdf,.docx,.txt" hidden />
-        </label>
-        <span id="cvFileStatus" class="muted"></span>
-      </div>
-      <details>
-        <summary>Or paste CV text</summary>
-        <textarea id="cvPasteText" rows="4" placeholder="Paste your CV as plain text"></textarea>
-        <button id="parseCvText">Parse pasted text</button>
+      <hr />
+
+      <section>
+        <h2>AI provider</h2>
+        <p class="muted">
+          None of these offer a public "log in with your account" flow for
+          third-party extensions like this one — their consumer chat subscriptions
+          are separate from their developer APIs. An API key (billed per call) is
+          the supported way to connect. Add a key for as many providers as you
+          want below — they're all kept ready to use — then pick which one is
+          active right now.
+        </p>
+        <label class="muted" for="activeProvider" style="display: block; margin-bottom: 4px">Currently using</label>
+        <select id="activeProvider">
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="kimi">Kimi (Moonshot)</option>
+          <option value="gemini">Gemini (Google)</option>
+        </select>
+        <p class="muted" style="margin-top: 6px">
+          Kimi doesn't support reading uploaded PDF files directly — for CV/cover
+          letter/document PDF uploads, switch to OpenAI, Anthropic, or Gemini first.
+        </p>
+      </section>
+
+      <details open>
+        <summary>OpenAI API key</summary>
+        <p class="muted">
+          Stored only in this browser's local extension storage — never sent anywhere
+          except directly to <code>api.openai.com</code>. Get one at
+          <a href="https://platform.openai.com/api-keys" target="_blank" rel="noopener">platform.openai.com/api-keys</a>.
+        </p>
+        <input type="password" id="openaiApiKey" placeholder="sk-..." autocomplete="off" />
+        <label class="checkboxRow"><input type="checkbox" id="showOpenaiKey" /> Show key</label>
+        <select id="openaiModel">
+          <option value="gpt-4o-mini">gpt-4o-mini (default, fastest/cheapest)</option>
+          <option value="gpt-4o">gpt-4o</option>
+          <option value="gpt-4.1-mini">gpt-4.1-mini</option>
+          <option value="gpt-4.1">gpt-4.1</option>
+        </select>
       </details>
 
-      <p class="muted" style="margin-top: 14px">Parsed CV data — edit if the AI got something wrong, then Save.</p>
-      <textarea id="cvJson" rows="14" spellcheck="false"></textarea>
-      <div class="row">
-        <button id="saveCv">Save CV data</button>
-        <button id="clearCv" class="secondary">Clear CV data</button>
-        <span id="cvStatus" class="muted"></span>
-      </div>
-
-      <div id="cvStyleSection" class="hidden" style="margin-top: 14px">
+      <details>
+        <summary>Anthropic (Claude) API key</summary>
         <p class="muted">
-          Photo and accent color found in your uploaded .docx — used when generating a
-          tailored CV so it isn't just plain black-and-white text. (Only works for
-          .docx uploads; PDFs don't expose this the same way.)
+          Stored only in this browser's local extension storage — never sent anywhere
+          except directly to <code>api.anthropic.com</code>. Get one at
+          <a href="https://console.anthropic.com/settings/keys" target="_blank" rel="noopener">console.anthropic.com/settings/keys</a>.
         </p>
-        <div class="row" style="align-items: center">
-          <img id="cvStylePhoto" class="hidden" alt="Extracted photo" />
-          <span id="cvStyleColorSwatch" class="hidden"></span>
-          <span id="cvStyleColorHex" class="muted"></span>
-          <button id="clearCvStyle" class="secondary">Clear style</button>
+        <input type="password" id="anthropicApiKey" placeholder="sk-ant-..." autocomplete="off" />
+        <label class="checkboxRow"><input type="checkbox" id="showAnthropicKey" /> Show key</label>
+        <select id="anthropicModel">
+          <option value="claude-sonnet-5">claude-sonnet-5 (default, balanced)</option>
+          <option value="claude-opus-5">claude-opus-5 (most capable)</option>
+          <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (fastest/cheapest)</option>
+        </select>
+      </details>
+
+      <details>
+        <summary>Kimi (Moonshot) API key</summary>
+        <p class="muted">
+          Stored only in this browser's local extension storage — never sent anywhere
+          except directly to <code>api.moonshot.ai</code>. Get one at
+          <a href="https://platform.moonshot.ai/console/api-keys" target="_blank" rel="noopener">platform.moonshot.ai/console/api-keys</a>.
+          (If your account is on Moonshot's mainland-China platform instead, its
+          keys are issued for <code>api.moonshot.cn</code> and won't work here.)
+        </p>
+        <input type="password" id="kimiApiKey" placeholder="sk-..." autocomplete="off" />
+        <label class="checkboxRow"><input type="checkbox" id="showKimiKey" /> Show key</label>
+        <select id="kimiModel">
+          <option value="kimi-k2.5">kimi-k2.5 (default, cheapest)</option>
+          <option value="kimi-k3">kimi-k3 (most capable)</option>
+        </select>
+      </details>
+
+      <details>
+        <summary>Gemini (Google) API key</summary>
+        <p class="muted">
+          Stored only in this browser's local extension storage — never sent anywhere
+          except directly to <code>generativelanguage.googleapis.com</code>. Get one at
+          <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.
+        </p>
+        <input type="password" id="geminiApiKey" placeholder="AIza..." autocomplete="off" />
+        <label class="checkboxRow"><input type="checkbox" id="showGeminiKey" /> Show key</label>
+        <select id="geminiModel">
+          <option value="gemini-3.5-flash">gemini-3.5-flash (default, fastest/cheapest)</option>
+          <option value="gemini-3.1-pro">gemini-3.1-pro (most capable)</option>
+        </select>
+      </details>
+
+      <hr />
+
+      <section>
+        <h2>Model per action</h2>
+        <p class="muted">
+          Use a different provider for specific actions — e.g. a cheap model for
+          autofill, a stronger one for rewriting your CV. Leave any of these as
+          "Active provider" to just follow the selection above.
+        </p>
+        <label class="muted" for="taskProviderAutofill" style="display: block; margin-top: 8px">Autofill this page</label>
+        <select id="taskProviderAutofill">
+          <option value="">Active provider</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="kimi">Kimi (Moonshot)</option>
+          <option value="gemini">Gemini (Google)</option>
+        </select>
+        <label class="muted" for="taskProviderTailorCv" style="display: block; margin-top: 10px">Rebuild / tailor CV</label>
+        <select id="taskProviderTailorCv">
+          <option value="">Active provider</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="kimi">Kimi (Moonshot)</option>
+          <option value="gemini">Gemini (Google)</option>
+        </select>
+        <label class="muted" for="taskProviderCoverLetter" style="display: block; margin-top: 10px">Rebuild / write cover letter</label>
+        <select id="taskProviderCoverLetter">
+          <option value="">Active provider</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="kimi">Kimi (Moonshot)</option>
+          <option value="gemini">Gemini (Google)</option>
+        </select>
+      </section>
+
+      <div class="row" style="margin-top: 12px">
+        <button id="save">Save</button>
+        <span id="saveStatus" class="muted"></span>
+      </div>
+    </div>
+
+    <!-- ==================== Info ==================== -->
+    <div class="tabPanel" id="tab-info">
+      <section>
+        <h2>Your CV</h2>
+        <p class="muted">Upload a PDF or Word (.docx) file, or paste plain text. Re-uploading replaces the saved CV.</p>
+        <div class="row">
+          <label class="fileBtn">
+            Upload PDF / .docx / .txt
+            <input type="file" id="cvFile" accept=".pdf,.docx,.txt" hidden />
+          </label>
+          <span id="cvFileStatus" class="muted"></span>
         </div>
-      </div>
-    </section>
+        <details>
+          <summary>Or paste CV text</summary>
+          <textarea id="cvPasteText" rows="4" placeholder="Paste your CV as plain text"></textarea>
+          <button id="parseCvText">Parse pasted text</button>
+        </details>
 
-    <hr />
+        <p class="muted" style="margin-top: 14px">Parsed CV data — edit if the AI got something wrong, then Save.</p>
+        <textarea id="cvJson" rows="14" spellcheck="false"></textarea>
+        <div class="row">
+          <button id="saveCv">Save CV data</button>
+          <button id="clearCv" class="secondary">Clear CV data</button>
+          <span id="cvStatus" class="muted"></span>
+        </div>
 
-    <section>
-      <h2>Your cover letter</h2>
-      <p class="muted">
-        Upload a past cover letter (PDF or .docx), or paste text. This is used as a
-        style/tone reference when generating a new, tailored cover letter from the
-        popup — it's never sent to a job site, and never copied verbatim.
-      </p>
-      <div class="row">
-        <label class="fileBtn">
-          Upload PDF / .docx / .txt
-          <input type="file" id="coverLetterFile" accept=".pdf,.docx,.txt" hidden />
-        </label>
-        <span id="coverLetterFileStatus" class="muted"></span>
-      </div>
+        <div id="cvStyleSection" class="hidden" style="margin-top: 14px">
+          <p class="muted">
+            Photo and accent color found in your uploaded .docx — used when generating a
+            tailored CV so it isn't just plain black-and-white text. (Only works for
+            .docx uploads; PDFs don't expose this the same way.)
+          </p>
+          <div class="row" style="align-items: center">
+            <img id="cvStylePhoto" class="hidden" alt="Extracted photo" />
+            <span id="cvStyleColorSwatch" class="hidden"></span>
+            <span id="cvStyleColorHex" class="muted"></span>
+            <button id="clearCvStyle" class="secondary">Clear style</button>
+          </div>
+        </div>
+      </section>
 
-      <p class="muted" style="margin-top: 14px">Saved cover letter text — edit freely, then Save.</p>
-      <textarea id="coverLetterText" rows="10" placeholder="Paste or edit your reference cover letter here"></textarea>
-      <div class="row">
-        <button id="saveCoverLetter">Save cover letter</button>
-        <button id="clearCoverLetter" class="secondary">Clear cover letter</button>
-        <span id="coverLetterStatus" class="muted"></span>
-      </div>
-    </section>
+      <hr />
 
-    <hr />
+      <section>
+        <h2>Your cover letter</h2>
+        <p class="muted">
+          Upload a past cover letter (PDF or .docx), or paste text. This is used as a
+          style/tone reference when generating a new, tailored cover letter from the
+          popup — it's never sent to a job site, and never copied verbatim.
+        </p>
+        <div class="row">
+          <label class="fileBtn">
+            Upload PDF / .docx / .txt
+            <input type="file" id="coverLetterFile" accept=".pdf,.docx,.txt" hidden />
+          </label>
+          <span id="coverLetterFileStatus" class="muted"></span>
+        </div>
 
-    <section>
-      <h2>About me / notes</h2>
-      <p class="muted">
-        Labeled notes the AI can draw on — things not in your CV, availability,
-        preferences, whatever's useful. Add as many as you want. Used the same way
-        as your CV when filling forms, writing cover letters, and answering questions
-        in the popup.
-      </p>
+        <p class="muted" style="margin-top: 14px">Saved cover letter text — edit freely, then Save.</p>
+        <textarea id="coverLetterText" rows="10" placeholder="Paste or edit your reference cover letter here"></textarea>
+        <div class="row">
+          <button id="saveCoverLetter">Save cover letter</button>
+          <button id="clearCoverLetter" class="secondary">Clear cover letter</button>
+          <span id="coverLetterStatus" class="muted"></span>
+        </div>
+      </section>
 
-      <p class="muted" style="margin-top: 10px">Add a note</p>
-      <input type="text" id="aboutMeNoteLabel" placeholder="Title — e.g. Availability" />
-      <textarea id="aboutMeNoteContent" rows="3" placeholder="What should the AI know"></textarea>
-      <div class="row">
-        <button id="addAboutMeNoteBtn">Add note</button>
-      </div>
+      <hr />
 
-      <p class="muted" style="margin-top: 14px">
-        Or upload a PDF, Word (.docx), or .txt file — a diploma, certificate, reference
-        letter, anything worth the AI having as context. Its text is extracted and
-        saved as a labeled note, same as above.
-      </p>
-      <input type="text" id="aboutMeFileLabel" placeholder="Title — e.g. Diploma (defaults to filename)" />
-      <div class="row">
-        <label class="fileBtn">
-          Upload PDF / .docx / .txt
-          <input type="file" id="aboutMeFileInput" accept=".pdf,.docx,.txt" hidden />
-        </label>
-        <span id="aboutMeFileStatus" class="muted"></span>
-      </div>
+      <section>
+        <h2>About me / notes</h2>
+        <p class="muted">
+          Labeled notes the AI can draw on — things not in your CV, availability,
+          preferences, whatever's useful. Add as many as you want. Used the same way
+          as your CV when filling forms, writing cover letters, and answering questions
+          in the popup.
+        </p>
 
-      <div id="aboutMeStatus" class="muted" style="margin-top: 8px"></div>
+        <p class="muted" style="margin-top: 10px">Add a note</p>
+        <input type="text" id="aboutMeNoteLabel" placeholder="Title — e.g. Availability" />
+        <textarea id="aboutMeNoteContent" rows="3" placeholder="What should the AI know"></textarea>
+        <div class="row">
+          <button id="addAboutMeNoteBtn">Add note</button>
+        </div>
 
-      <p class="muted" style="margin-top: 14px">Saved notes</p>
-      <div id="aboutMeNotesList" class="resourceList"></div>
-    </section>
+        <p class="muted" style="margin-top: 14px">
+          Or upload a PDF, Word (.docx), or .txt file — a diploma, certificate, reference
+          letter, anything worth the AI having as context. Its text is extracted and
+          saved as a labeled note, same as above.
+        </p>
+        <input type="text" id="aboutMeFileLabel" placeholder="Title — e.g. Diploma (defaults to filename)" />
+        <div class="row">
+          <label class="fileBtn">
+            Upload PDF / .docx / .txt
+            <input type="file" id="aboutMeFileInput" accept=".pdf,.docx,.txt" hidden />
+          </label>
+          <span id="aboutMeFileStatus" class="muted"></span>
+        </div>
 
-    <hr />
+        <div id="aboutMeStatus" class="muted" style="margin-top: 8px"></div>
 
-    <section>
-      <h2>Addresses</h2>
-      <p class="muted">
-        Labeled physical addresses — home, mailing, previous employer, whatever
-        applies. Used to fill address-shaped fields (street, city, postal code,
-        country) during autofill and Ask AI.
-      </p>
-      <input type="text" id="addressLabel" placeholder="Title — e.g. Home" />
-      <textarea id="addressContent" rows="3" placeholder="Street, city, state/province, postal code, country"></textarea>
-      <div class="row">
-        <button id="addAddressBtn">Add address</button>
-      </div>
-      <div id="addressStatus" class="muted" style="margin-top: 8px"></div>
-      <p class="muted" style="margin-top: 14px">Saved addresses</p>
-      <div id="addressList" class="resourceList"></div>
-    </section>
+        <p class="muted" style="margin-top: 14px">Saved notes</p>
+        <div id="aboutMeNotesList" class="resourceList"></div>
+      </section>
 
-    <hr />
+      <hr />
 
-    <section>
-      <h2>Resources</h2>
-      <p class="muted">
-        Add links to your own websites (portfolio, GitHub, personal site) — their text
-        content is fetched once and saved as extra context. You'll be asked to approve
-        access to each site the first time. Notes added from the popup's "Add info"
-        button land here too.
-      </p>
-      <div class="row">
-        <input type="text" id="resourceUrl" placeholder="https://your-site.com" style="flex: 1" />
-        <button id="addResourceUrl">Fetch &amp; add</button>
-      </div>
-      <div id="resourceUrlStatus" class="muted"></div>
-      <div id="resourceList" class="resourceList"></div>
-    </section>
+      <section>
+        <h2>Addresses</h2>
+        <p class="muted">
+          Labeled physical addresses — home, mailing, previous employer, whatever
+          applies. Used to fill address-shaped fields (street, city, postal code,
+          country) during autofill and Ask AI.
+        </p>
+        <input type="text" id="addressLabel" placeholder="Title — e.g. Home" />
+        <textarea id="addressContent" rows="3" placeholder="Street, city, state/province, postal code, country"></textarea>
+        <div class="row">
+          <button id="addAddressBtn">Add address</button>
+        </div>
+        <div id="addressStatus" class="muted" style="margin-top: 8px"></div>
+        <p class="muted" style="margin-top: 14px">Saved addresses</p>
+        <div id="addressList" class="resourceList"></div>
+      </section>
 
-    <hr />
+      <hr />
 
-    <section id="backupSection">
-      <h2>Backup</h2>
-      <p class="muted">
-        Export downloads a single JSON file with everything: CV, cover letter,
-        notes, addresses, resources, CV style, and your API keys for all four
-        providers — enough to fully restore this extension after a reinstall or
-        on a new browser via Import. <strong>This file contains your API keys in
-        plain text — keep it somewhere private (not a public folder, not a
-        GitHub repo, not shared with anyone) and never commit it anywhere.</strong>
-        To "update" a backup, just export again over the same file.
-      </p>
-      <div class="row">
-        <button id="exportBackupBtn" class="secondary">Export backup</button>
-        <label class="fileBtn">
-          Import backup
-          <input type="file" id="importBackupInput" accept=".json,application/json" hidden />
-        </label>
-        <span id="backupStatus" class="muted"></span>
-      </div>
-    </section>
+      <section>
+        <h2>Resources</h2>
+        <p class="muted">
+          Add links to your own websites (portfolio, GitHub, personal site) — their text
+          content is fetched once and saved as extra context. You'll be asked to approve
+          access to each site the first time. Notes added from the popup's "Add info"
+          button land here too.
+        </p>
+        <div class="row">
+          <input type="text" id="resourceUrl" placeholder="https://your-site.com" style="flex: 1" />
+          <button id="addResourceUrl">Fetch &amp; add</button>
+        </div>
+        <div id="resourceUrlStatus" class="muted"></div>
+        <div id="resourceList" class="resourceList"></div>
+      </section>
 
+      <hr />
+
+      <section id="backupSection">
+        <h2>Backup</h2>
+        <p class="muted">
+          Export downloads a single JSON file with everything: CV, cover letter,
+          notes, addresses, resources, CV style, and your API keys for all four
+          providers — enough to fully restore this extension after a reinstall or
+          on a new browser via Import. <strong>This file contains your API keys in
+          plain text — keep it somewhere private (not a public folder, not a
+          GitHub repo, not shared with anyone) and never commit it anywhere.</strong>
+          To "update" a backup, just export again over the same file.
+        </p>
+        <div class="row">
+          <button id="exportBackupBtn" class="secondary">Export backup</button>
+          <label class="fileBtn">
+            Import backup
+            <input type="file" id="importBackupInput" accept=".json,application/json" hidden />
+          </label>
+          <span id="backupStatus" class="muted"></span>
+        </div>
+      </section>
+    </div>
+
+    <script src="../shared/theme.js"></script>
     <script src="../shared/copy-status.js"></script>
     <script src="../lib/docx.js"></script>
     <script src="options.js"></script>
