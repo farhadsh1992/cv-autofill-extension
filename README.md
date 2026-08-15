@@ -7,12 +7,14 @@ whatever a given job site needs.
 
 ## Icon
 
-A flat-vector mark in `#9E230B` — a CV document, a sync badge, a generic "TXT"
-file badge, and a folder with an "F" monogram. `icons/icon-128.png` uses the
-full composition; `icons/icon-16.png` / `icon-32.png` / `icon-48.png` use a
-simplified variant (drops the TXT badge) since the full mark gets muddy at
-toolbar sizes. Source SVGs and design iterations are in `icon-design/` —
-`icon_final_hero.svg` / `icon_final_simple.svg` are the ones actually in use.
+A gold-and-crimson crest (`icon-design/logo_source.png`), used as-is —
+`icons/icon-16.png` / `icon-32.png` / `icon-48.png` / `icon-128.png` are all
+the same image, just resized per slot, no recoloring. It's a detailed
+illustration rather than a flat glyph, so at 16–32px (toolbar size) it reads
+as a small colored mark rather than a crisp icon — a known tradeoff, kept
+because using the artwork unmodified was the priority. The previous flat
+vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
+`icon-design/`) is no longer used but kept for reference.
 
 ## How it works
 
