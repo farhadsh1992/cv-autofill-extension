@@ -100,9 +100,9 @@ AFTER INSTALLING (any browser)
    of the same on the fly.
 9. Stuck on a question autofill couldn't answer? Click "Ask AI directly"
    in the popup for a quick, CV-grounded answer you can paste in yourself.
-10. (Chrome only) Options > Backup folder lets you mirror all of the above
-    to a folder on disk as plain files, purely as your own backup copy —
-    the extension keeps working from its own storage either way.
+10. Options > Export backup downloads a single JSON snapshot of all of the
+    above, purely as your own backup copy — the extension keeps working
+    from its own internal storage either way.
 
 The popup and Options page both follow your OS/browser's light or dark
 appearance automatically — no setting to toggle.

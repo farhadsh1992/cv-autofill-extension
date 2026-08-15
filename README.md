@@ -84,16 +84,17 @@ per call — neither OpenAI nor Anthropic offer a public "log in with your
 ChatGPT/Claude.ai account" flow for third-party extensions like this one, so
 there's no way to reuse a ChatGPT Plus or Claude Pro subscription here.
 
-### Backup folder (Chrome only)
+### Export backup
 
-Options also has a **Backup folder** section — pick a folder and every save
-(CV, cover letter, about-me, resources) also gets mirrored there as plain
-files, purely for your own inspection/backup. This uses the File System
-Access API, which only Chrome supports — Safari, Firefox, and Orion (all
-WebKit-based) don't implement it, so the section is disabled there. In every
-browser, including Chrome, the extension always reads from its own internal
-storage — the backup folder is never the source of truth, so nothing breaks
-if you skip it or it's unavailable.
+Options has an **Export backup** button — downloads a single JSON snapshot
+of your CV, cover letter, about-me notes, resources, and CV style, purely
+for your own inspection/backup. (An earlier version of this tried to let
+you pick a folder to auto-mirror into on every save, using the File System
+Access API — that's confirmed broken specifically inside browser extension
+pages regardless of any permission grant, [not just on this Mac](https://issues.chromium.org/issues/40240444),
+so it's gone in favor of this simpler, actually-working export.) The
+extension always reads from its own internal storage either way — this is
+just a copy, never the source of truth.
 
 ## Load it in Firefox (development / personal use)
 
@@ -148,7 +149,7 @@ lib/docx.js             Standalone .docx → plain text/style extractor (no exte
 lib/pdf-writer.js       Standalone plain text → PDF writer (no external library)
 lib/docx-writer.js      Standalone plain data → .docx writer, with optional photo/color (no external library)
 popup/                  Toolbar popup UI — autofill, cover letter, tailored CV, add info, ask AI
-options/                Provider/API key/model settings, CV/cover letter upload, resources, backup folder
+options/                Provider/API key/model settings, CV/cover letter upload, resources, export backup
 windows/                Small popup windows opened from the toolbar popup ("Add info", "Ask AI directly")
 ```
 

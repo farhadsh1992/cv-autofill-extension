@@ -165,16 +165,15 @@
     <hr />
 
     <section id="backupSection">
-      <h2>Backup folder <span class="muted">(Chrome only)</span></h2>
-      <p class="muted" id="backupIntro">
-        Optionally mirror your CV, cover letter, notes, and resources to a folder on
-        disk as plain files, purely as your own backup/inspection copy. The extension
-        always keeps working from its normal internal storage in every browser —
-        this is an extra copy, not a replacement.
+      <h2>Export backup</h2>
+      <p class="muted">
+        Downloads a single JSON file with your CV, cover letter, notes, resources, and
+        CV style — purely a backup/inspection copy. The extension always keeps working
+        from its normal internal storage; this doesn't replace that, and importing it
+        back isn't supported yet — it's for your own records.
       </p>
       <div class="row">
-        <button id="chooseBackupFolder" class="secondary">Choose folder</button>
-        <button id="forgetBackupFolder" class="secondary hidden">Forget folder</button>
+        <button id="exportBackupBtn" class="secondary">Export backup</button>
         <span id="backupStatus" class="muted"></span>
       </div>
     </section>

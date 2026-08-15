@@ -80,7 +80,6 @@ async function init() {
   renderResourceList(stored.resources || []);
 
   updateVisibleSection();
-  initBackupSection();
 }
 
 function updateVisibleSection() {
@@ -194,7 +193,6 @@ cvFileInput.addEventListener("change", async () => {
     const response = await chrome.runtime.sendMessage(msg);
     if (response.error) throw new Error(response.error);
     cvJsonArea.value = JSON.stringify(response.cvData, null, 2);
-    mirrorToBackupFolder("cv.json", cvJsonArea.value);
     flash(cvFileStatus, "CV parsed and saved.");
   } catch (err) {
     flash(cvFileStatus, err.message, true);
@@ -214,7 +212,6 @@ parseCvTextBtn.addEventListener("click", async () => {
     const response = await chrome.runtime.sendMessage({ type: "PARSE_CV", isPdf: false, text });
     if (response.error) throw new Error(response.error);
     cvJsonArea.value = JSON.stringify(response.cvData, null, 2);
-    mirrorToBackupFolder("cv.json", cvJsonArea.value);
     flash(cvStatus, "CV parsed and saved.");
   } catch (err) {
     flash(cvStatus, err.message, true);
@@ -225,7 +222,6 @@ saveCvBtn.addEventListener("click", async () => {
   try {
     const cvData = JSON.parse(cvJsonArea.value);
     await chrome.storage.local.set({ cvData });
-    mirrorToBackupFolder("cv.json", JSON.stringify(cvData, null, 2));
     flash(cvStatus, "CV data saved.");
   } catch (err) {
     flash(cvStatus, `Invalid JSON: ${err.message}`, true);
@@ -280,7 +276,6 @@ coverLetterFileInput.addEventListener("change", async () => {
     const response = await chrome.runtime.sendMessage(msg);
     if (response.error) throw new Error(response.error);
     coverLetterTextArea.value = response.coverLetterText;
-    mirrorToBackupFolder("cover-letter.txt", response.coverLetterText);
     flash(coverLetterFileStatus, "Cover letter saved.");
   } catch (err) {
     flash(coverLetterFileStatus, err.message, true);
@@ -292,7 +287,6 @@ coverLetterFileInput.addEventListener("change", async () => {
 saveCoverLetterBtn.addEventListener("click", async () => {
   const coverLetterText = coverLetterTextArea.value.trim();
   await chrome.storage.local.set({ coverLetterText });
-  mirrorToBackupFolder("cover-letter.txt", coverLetterText);
   flash(coverLetterStatus, "Cover letter saved.");
 });
 
@@ -321,7 +315,6 @@ function flash(el, text, isError = false) {
 saveAboutMeBtn.addEventListener("click", async () => {
   const aboutMeText = aboutMeTextArea.value.trim();
   await chrome.storage.local.set({ aboutMeText });
-  mirrorToBackupFolder("about-me.txt", aboutMeText);
   flash(aboutMeStatus, "Saved.");
 });
 
@@ -376,7 +369,6 @@ addResourceUrlBtn.addEventListener("click", async () => {
     const { resources = [] } = await chrome.storage.local.get("resources");
     resources.push({ id: crypto.randomUUID(), label: title, url: rawUrl, content: text, addedAt: Date.now() });
     await chrome.storage.local.set({ resources });
-    mirrorToBackupFolder("resources.json", JSON.stringify(resources, null, 2));
 
     resourceUrlInput.value = "";
     flash(resourceUrlStatus, "Added.");
@@ -420,7 +412,6 @@ function renderResourceList(resources) {
       const { resources: current = [] } = await chrome.storage.local.get("resources");
       const next = current.filter((x) => x.id !== r.id);
       await chrome.storage.local.set({ resources: next });
-      mirrorToBackupFolder("resources.json", JSON.stringify(next, null, 2));
       renderResourceList(next);
     });
 
@@ -430,109 +421,46 @@ function renderResourceList(resources) {
   }
 }
 
-// ---- Backup folder mirror (Chrome only — File System Access API) ----
-// Purely a best-effort copy of saved data as plain files, for the user's own
-// backup/inspection. The extension always reads from chrome.storage.local,
-// in every browser — this never becomes the source of truth.
+// ---- Export backup ----
+// A "choose a folder and silently mirror every save into it" version of
+// this used to live here, built on window.showDirectoryPicker(). That API
+// is confirmed broken specifically inside extension pages (AbortError,
+// regardless of any permission grant — see
+// https://issues.chromium.org/issues/40240444 and
+// https://github.com/WICG/file-system-access/issues/314), so it's gone.
+// This is the realistic replacement: one on-demand export, using the same
+// chrome.downloads.download() + data: URL approach as the CV/cover letter
+// downloads (which has its own well-known blob: URL gotcha in popups —
+// see bytesToDataUrl-equivalent below).
 
-const BACKUP_DB_NAME = "cv-autofill-backup";
-const BACKUP_STORE = "handles";
-const BACKUP_KEY = "folder";
-
-const chooseBackupFolderBtn = document.getElementById("chooseBackupFolder");
-const forgetBackupFolderBtn = document.getElementById("forgetBackupFolder");
+const exportBackupBtn = document.getElementById("exportBackupBtn");
 const backupStatusEl = document.getElementById("backupStatus");
-const backupIntroEl = document.getElementById("backupIntro");
 
-function backupSupported() {
-  return typeof window.showDirectoryPicker === "function";
-}
-
-function openBackupDb() {
-  return new Promise((resolve, reject) => {
-    const req = indexedDB.open(BACKUP_DB_NAME, 1);
-    req.onupgradeneeded = () => req.result.createObjectStore(BACKUP_STORE);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function idbGet(key) {
-  const db = await openBackupDb();
-  return new Promise((resolve, reject) => {
-    const req = db.transaction(BACKUP_STORE, "readonly").objectStore(BACKUP_STORE).get(key);
-    req.onsuccess = () => resolve(req.result);
-    req.onerror = () => reject(req.error);
-  });
-}
-
-async function idbSet(key, value) {
-  const db = await openBackupDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(BACKUP_STORE, "readwrite");
-    tx.objectStore(BACKUP_STORE).put(value, key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function idbDelete(key) {
-  const db = await openBackupDb();
-  return new Promise((resolve, reject) => {
-    const tx = db.transaction(BACKUP_STORE, "readwrite");
-    tx.objectStore(BACKUP_STORE).delete(key);
-    tx.oncomplete = () => resolve();
-    tx.onerror = () => reject(tx.error);
-  });
-}
-
-async function initBackupSection() {
-  if (!backupSupported()) {
-    chooseBackupFolderBtn.disabled = true;
-    chooseBackupFolderBtn.title = "Only available in Chrome";
-    backupIntroEl.textContent += " Not supported in this browser — Chrome only.";
-    return;
+function textToDataUrl(text, mimeType) {
+  const bytes = new TextEncoder().encode(text);
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
   }
-  try {
-    const handle = await idbGet(BACKUP_KEY);
-    if (handle) {
-      forgetBackupFolderBtn.classList.remove("hidden");
-      flash(backupStatusEl, `Backing up to "${handle.name}".`);
-    }
-  } catch {
-    // no folder chosen yet — fine
-  }
+  return `data:${mimeType};base64,${btoa(binary)}`;
 }
 
-chooseBackupFolderBtn.addEventListener("click", async () => {
+exportBackupBtn.addEventListener("click", async () => {
   try {
-    const handle = await window.showDirectoryPicker({ mode: "readwrite" });
-    await idbSet(BACKUP_KEY, handle);
-    forgetBackupFolderBtn.classList.remove("hidden");
-    flash(backupStatusEl, `Backing up to "${handle.name}". It'll fill in as you save things.`);
+    flash(backupStatusEl, "Exporting...");
+    const data = await chrome.storage.local.get([
+      "cvData",
+      "coverLetterText",
+      "aboutMeText",
+      "resources",
+      "cvStyle",
+    ]);
+    const bundle = { exportedAt: new Date().toISOString(), ...data };
+    const url = textToDataUrl(JSON.stringify(bundle, null, 2), "application/json");
+    await chrome.downloads.download({ url, filename: "cv-autofill-backup.json", saveAs: true });
+    flash(backupStatusEl, "Exported.");
   } catch (err) {
-    if (err.name !== "AbortError") flash(backupStatusEl, err.message, true);
+    flash(backupStatusEl, err.message, true);
   }
 });
-
-forgetBackupFolderBtn.addEventListener("click", async () => {
-  await idbDelete(BACKUP_KEY);
-  forgetBackupFolderBtn.classList.add("hidden");
-  flash(backupStatusEl, "Backup folder forgotten.");
-});
-
-async function mirrorToBackupFolder(filename, content) {
-  if (!backupSupported()) return;
-  try {
-    const dirHandle = await idbGet(BACKUP_KEY);
-    if (!dirHandle) return;
-    const perm = await dirHandle.requestPermission({ mode: "readwrite" });
-    if (perm !== "granted") return;
-    const fileHandle = await dirHandle.getFileHandle(filename, { create: true });
-    const writable = await fileHandle.createWritable();
-    await writable.write(content || "");
-    await writable.close();
-  } catch (err) {
-    console.warn("Backup mirror failed:", err);
-  }
-}

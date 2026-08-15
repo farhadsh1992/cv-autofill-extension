@@ -14,6 +14,21 @@ const statusEl = document.getElementById("status");
 
 openOptionsBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
 
+// chrome.downloads.download() needs a URL that outlives this popup. A
+// blob: URL is scoped to this document — when saveAs:true opens a native
+// Save dialog, the popup loses focus and MV3 closes it immediately, which
+// invalidates the blob before the download can read it (a well-known
+// Chrome extension gotcha). A data: URL is a self-contained string with no
+// such dependency, so it survives the popup closing.
+function bytesToDataUrl(bytes, mimeType) {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return `data:${mimeType};base64,${btoa(binary)}`;
+}
+
 init();
 
 async function init() {
@@ -188,8 +203,7 @@ async function handleDownloadPdf() {
   try {
     const { cvData } = await chrome.storage.local.get("cvData");
     const bytes = generateCoverLetterPdf(coverLetterOutput.value);
-    const blob = new Blob([bytes], { type: "application/pdf" });
-    const url = URL.createObjectURL(blob);
+    const url = bytesToDataUrl(bytes, "application/pdf");
 
     const namePart = (cvData && cvData.full_name ? cvData.full_name : "cover-letter")
       .trim()
@@ -198,7 +212,6 @@ async function handleDownloadPdf() {
     const filename = `${namePart || "cover-letter"}_Cover_Letter.pdf`;
 
     await chrome.downloads.download({ url, filename, saveAs: true });
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
     setStatus("Cover letter downloaded as PDF.");
   } catch (err) {
     setStatus(err.message, true);
@@ -227,10 +240,7 @@ async function handleGenerateCvDocx() {
     if (response.error) throw new Error(response.error);
 
     const bytes = generateCvDocx(response.tailoredCv, cvStyle);
-    const blob = new Blob([bytes], {
-      type: "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
-    });
-    const url = URL.createObjectURL(blob);
+    const url = bytesToDataUrl(bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
 
     const namePart = (response.tailoredCv && response.tailoredCv.full_name ? response.tailoredCv.full_name : "CV")
       .trim()
@@ -239,7 +249,6 @@ async function handleGenerateCvDocx() {
     const filename = `${namePart || "CV"}_Tailored_CV.docx`;
 
     await chrome.downloads.download({ url, filename, saveAs: true });
-    setTimeout(() => URL.revokeObjectURL(url), 60000);
     setStatus("Tailored CV downloaded as a Word document. Review it before sending.");
   } catch (err) {
     setStatus(err.message, true);
