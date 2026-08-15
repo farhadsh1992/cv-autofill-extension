@@ -1,4 +1,6 @@
-<img src="icon-design/logo_source.png" alt="Farhad's CV AutoFill logo" width="160" />
+<p align="center">
+  <img src="icon-design/logo_source.png" alt="Farhad's CV AutoFill logo" width="160" />
+</p>
 
 # Farhad's CV AutoFill
 
