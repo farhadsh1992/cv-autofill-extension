@@ -48,7 +48,6 @@ body {
 header {
   display: flex;
   flex-direction: column;
-  align-items: flex-start;
   gap: 8px;
   margin-bottom: 8px;
 }
@@ -57,12 +56,6 @@ h1 {
   font-size: 15px;
   margin: 0;
   white-space: nowrap;
-}
-
-header .secondary {
-  width: auto;
-  padding: 5px 12px;
-  font-size: 12px;
 }
 
 .muted {
