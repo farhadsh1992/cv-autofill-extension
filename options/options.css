@@ -50,15 +50,17 @@ h1 {
 
 .pageHeader {
   display: flex;
+  flex-direction: column;
   align-items: center;
-  gap: 12px;
+  text-align: center;
+  gap: 10px;
   margin-bottom: 4px;
 }
 
 .pageLogo {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
+  width: 64px;
+  height: 64px;
+  border-radius: 12px;
   flex-shrink: 0;
 }
 
