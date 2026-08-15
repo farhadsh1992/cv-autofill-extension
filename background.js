@@ -44,6 +44,9 @@ Respond with JSON only — no markdown code fences, no commentary, no text befor
 const COVER_LETTER_EXTRACT_PROMPT = `Extract the full text of this cover letter as faithfully as possible, preserving paragraph breaks. Do not summarize or comment on it.
 Respond as JSON: {"text": "..."}. Respond with JSON only — no markdown code fences, no commentary.`;
 
+const DOCUMENT_EXTRACT_PROMPT = `Extract the full text of this document as faithfully as possible, preserving structure (headings, line breaks). It may be a diploma, certificate, letter, or any other personal document — do not summarize or comment on it, just transcribe what's there.
+Respond as JSON: {"text": "..."}. Respond with JSON only — no markdown code fences, no commentary.`;
+
 const COVER_LETTER_WRITE_PROMPT = `You are helping a job applicant write a new cover letter tailored to a specific job posting.
 You are given:
 - CV_DATA: the applicant's CV, as structured JSON.
@@ -92,8 +95,18 @@ const MAX_RESOURCES_IN_CONTEXT = 8;
 const MAX_RESOURCE_CHARS = 1500;
 
 async function buildContextBlock() {
-  const { resources = [], aboutMeText } = await chrome.storage.local.get(["resources", "aboutMeText"]);
-  const parts = [`ABOUT_ME:\n${(aboutMeText || "").trim() || "(none provided)"}`];
+  const { resources = [], aboutMeNotes = [] } = await chrome.storage.local.get(["resources", "aboutMeNotes"]);
+
+  let aboutMeBlock;
+  if (aboutMeNotes.length) {
+    const recentNotes = aboutMeNotes.slice(-MAX_RESOURCES_IN_CONTEXT);
+    aboutMeBlock = recentNotes
+      .map((n) => `- ${n.label || "Note"}:\n${(n.content || "").slice(0, MAX_RESOURCE_CHARS)}`)
+      .join("\n\n");
+  } else {
+    aboutMeBlock = "(none provided)";
+  }
+  const parts = [`ABOUT_ME:\n${aboutMeBlock}`];
 
   if (resources.length) {
     const recent = resources.slice(-MAX_RESOURCES_IN_CONTEXT);
@@ -143,6 +156,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg.type === "ASK_LLM") {
     handleAskLlm(msg)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (msg.type === "EXTRACT_DOCUMENT_TEXT") {
+    handleExtractDocumentText(msg)
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
     return true;
@@ -296,6 +315,14 @@ async function handleSaveCoverLetter({ isPdf, base64, text }) {
   }
   await chrome.storage.local.set({ coverLetterText });
   return { coverLetterText };
+}
+
+// Used for About-Me file uploads (diploma, certificate, etc.) — PDFs need
+// the model to pull text out; .docx/.txt are already extracted client-side
+// before this is ever called.
+async function handleExtractDocumentText({ base64 }) {
+  const result = await callAI([{ type: "text", text: DOCUMENT_EXTRACT_PROMPT }, { type: "pdf", base64 }]);
+  return { text: (result.text || "").trim() };
 }
 
 async function handleGenerateCoverLetter({ cvData, coverLetterText, jobContext }) {

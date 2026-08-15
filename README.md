@@ -49,11 +49,14 @@ toolbar sizes. Source SVGs and design iterations are in `icon-design/` —
    autofill couldn't confidently answer something — it uses your saved CV
    and resources as context and gives you a direct answer to copy in
    yourself.
-8. **Options → Resources**: add links to your own websites (portfolio,
-   GitHub, personal site) — their text is fetched once (you approve access
-   per-site) and saved as extra context — plus a free-form "About me / notes"
-   field for anything not in your CV. All of this feeds into autofill, cover
-   letters, tailored CVs, and Ask AI answers.
+8. **Options → About me / notes**: add as many labeled notes as you want —
+   availability, preferences, anything not in your CV — or upload a PDF,
+   Word (.docx), or .txt file (a diploma, certificate, reference letter) and
+   its text is extracted and saved as a labeled note the same way. **Options
+   → Resources**: add links to your own websites (portfolio, GitHub, personal
+   site) — their text is fetched once (you approve access per-site) and saved
+   as extra context. All of this feeds into autofill, cover letters, tailored
+   CVs, and Ask AI answers.
 
 ### What it deliberately won't touch
 
@@ -87,7 +90,7 @@ there's no way to reuse a ChatGPT Plus or Claude Pro subscription here.
 ### Export backup
 
 Options has an **Export backup** button — downloads a single JSON snapshot
-of your CV, cover letter, about-me notes, resources, and CV style, purely
+of your CV, cover letter, About Me notes, resources, and CV style, purely
 for your own inspection/backup. (An earlier version of this tried to let
 you pick a folder to auto-mirror into on every save, using the File System
 Access API — that's confirmed broken specifically inside browser extension

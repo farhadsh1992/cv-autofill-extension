@@ -132,16 +132,37 @@
     <section>
       <h2>About me / notes</h2>
       <p class="muted">
-        Free-form background the AI can draw on — things not in your CV, availability,
-        preferences, whatever's useful. Used the same way as your CV when filling forms,
-        writing cover letters, and answering questions in the popup.
+        Labeled notes the AI can draw on — things not in your CV, availability,
+        preferences, whatever's useful. Add as many as you want. Used the same way
+        as your CV when filling forms, writing cover letters, and answering questions
+        in the popup.
       </p>
-      <textarea id="aboutMeText" rows="6" placeholder="Anything else worth the AI knowing about you"></textarea>
+
+      <p class="muted" style="margin-top: 10px">Add a note</p>
+      <input type="text" id="aboutMeNoteLabel" placeholder="Title — e.g. Availability" />
+      <textarea id="aboutMeNoteContent" rows="3" placeholder="What should the AI know"></textarea>
       <div class="row">
-        <button id="saveAboutMe">Save</button>
-        <button id="clearAboutMe" class="secondary">Clear</button>
-        <span id="aboutMeStatus" class="muted"></span>
+        <button id="addAboutMeNoteBtn">Add note</button>
       </div>
+
+      <p class="muted" style="margin-top: 14px">
+        Or upload a PDF, Word (.docx), or .txt file — a diploma, certificate, reference
+        letter, anything worth the AI having as context. Its text is extracted and
+        saved as a labeled note, same as above.
+      </p>
+      <input type="text" id="aboutMeFileLabel" placeholder="Title — e.g. Diploma (defaults to filename)" />
+      <div class="row">
+        <label class="fileBtn">
+          Upload PDF / .docx / .txt
+          <input type="file" id="aboutMeFileInput" accept=".pdf,.docx,.txt" hidden />
+        </label>
+        <span id="aboutMeFileStatus" class="muted"></span>
+      </div>
+
+      <div id="aboutMeStatus" class="muted" style="margin-top: 8px"></div>
+
+      <p class="muted" style="margin-top: 14px">Saved notes</p>
+      <div id="aboutMeNotesList" class="resourceList"></div>
     </section>
 
     <hr />

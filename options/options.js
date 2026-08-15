@@ -35,10 +35,14 @@ const saveCoverLetterBtn = document.getElementById("saveCoverLetter");
 const clearCoverLetterBtn = document.getElementById("clearCoverLetter");
 const coverLetterStatus = document.getElementById("coverLetterStatus");
 
-const aboutMeTextArea = document.getElementById("aboutMeText");
-const saveAboutMeBtn = document.getElementById("saveAboutMe");
-const clearAboutMeBtn = document.getElementById("clearAboutMe");
+const aboutMeNoteLabelInput = document.getElementById("aboutMeNoteLabel");
+const aboutMeNoteContentArea = document.getElementById("aboutMeNoteContent");
+const addAboutMeNoteBtn = document.getElementById("addAboutMeNoteBtn");
+const aboutMeFileLabelInput = document.getElementById("aboutMeFileLabel");
+const aboutMeFileInput = document.getElementById("aboutMeFileInput");
+const aboutMeFileStatus = document.getElementById("aboutMeFileStatus");
 const aboutMeStatus = document.getElementById("aboutMeStatus");
+const aboutMeNotesListEl = document.getElementById("aboutMeNotesList");
 
 const resourceUrlInput = document.getElementById("resourceUrl");
 const addResourceUrlBtn = document.getElementById("addResourceUrl");
@@ -57,7 +61,8 @@ async function init() {
     "cvData",
     "cvStyle",
     "coverLetterText",
-    "aboutMeText",
+    "aboutMeNotes",
+    "aboutMeText", // legacy single-blob field, migrated below
     "resources",
     // legacy single-provider keys from before multi-provider support
     "apiKey",
@@ -76,7 +81,16 @@ async function init() {
   if (stored.cvData) cvJsonArea.value = JSON.stringify(stored.cvData, null, 2);
   if (stored.cvStyle) renderCvStyle(stored.cvStyle);
   if (stored.coverLetterText) coverLetterTextArea.value = stored.coverLetterText;
-  if (stored.aboutMeText) aboutMeTextArea.value = stored.aboutMeText;
+
+  let aboutMeNotes = stored.aboutMeNotes || [];
+  if (!aboutMeNotes.length && stored.aboutMeText && stored.aboutMeText.trim()) {
+    // one-time migration from the old single-textarea design
+    aboutMeNotes = [{ id: crypto.randomUUID(), label: "About me", content: stored.aboutMeText.trim(), addedAt: Date.now() }];
+    await chrome.storage.local.set({ aboutMeNotes });
+    await chrome.storage.local.remove("aboutMeText");
+  }
+  renderAboutMeNotes(aboutMeNotes);
+
   renderResourceList(stored.resources || []);
 
   updateVisibleSection();
@@ -310,18 +324,106 @@ function flash(el, text, isError = false) {
   }
 }
 
-// ---- About me ----
+// ---- About me / notes ----
 
-saveAboutMeBtn.addEventListener("click", async () => {
-  const aboutMeText = aboutMeTextArea.value.trim();
-  await chrome.storage.local.set({ aboutMeText });
-  flash(aboutMeStatus, "Saved.");
+function renderAboutMeNotes(notes) {
+  aboutMeNotesListEl.innerHTML = "";
+  if (!notes.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No notes saved yet.";
+    aboutMeNotesListEl.appendChild(empty);
+    return;
+  }
+
+  for (const n of notes.slice().reverse()) {
+    const item = document.createElement("div");
+    item.className = "resourceItem";
+
+    const meta = document.createElement("div");
+    meta.className = "resourceMeta";
+    const label = document.createElement("div");
+    label.className = "resourceLabel";
+    label.textContent = n.label || "Note";
+    makeCopyable(label, n.label || "");
+    const preview = document.createElement("div");
+    preview.className = "resourcePreview";
+    preview.textContent = n.content || "";
+    makeCopyable(preview, n.content || "");
+    meta.appendChild(label);
+    meta.appendChild(preview);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "secondary";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", async () => {
+      const { aboutMeNotes: current = [] } = await chrome.storage.local.get("aboutMeNotes");
+      const next = current.filter((x) => x.id !== n.id);
+      await chrome.storage.local.set({ aboutMeNotes: next });
+      renderAboutMeNotes(next);
+    });
+
+    item.appendChild(meta);
+    item.appendChild(removeBtn);
+    aboutMeNotesListEl.appendChild(item);
+  }
+}
+
+async function addAboutMeNote(label, content) {
+  const { aboutMeNotes = [] } = await chrome.storage.local.get("aboutMeNotes");
+  aboutMeNotes.push({ id: crypto.randomUUID(), label: label || "Note", content, addedAt: Date.now() });
+  await chrome.storage.local.set({ aboutMeNotes });
+  renderAboutMeNotes(aboutMeNotes);
+}
+
+addAboutMeNoteBtn.addEventListener("click", async () => {
+  const content = aboutMeNoteContentArea.value.trim();
+  if (!content) {
+    flash(aboutMeStatus, "Write something first.", true);
+    return;
+  }
+  const label = aboutMeNoteLabelInput.value.trim();
+  await addAboutMeNote(label, content);
+  aboutMeNoteLabelInput.value = "";
+  aboutMeNoteContentArea.value = "";
+  flash(aboutMeStatus, "Note added.");
 });
 
-clearAboutMeBtn.addEventListener("click", async () => {
-  await chrome.storage.local.remove("aboutMeText");
-  aboutMeTextArea.value = "";
-  flash(aboutMeStatus, "Cleared.");
+aboutMeFileInput.addEventListener("change", async () => {
+  const file = aboutMeFileInput.files[0];
+  if (!file) return;
+  const defaultLabel = file.name.replace(/\.[^.]+$/, "");
+  const label = aboutMeFileLabelInput.value.trim() || defaultLabel;
+
+  try {
+    flash(aboutMeFileStatus, "Reading file...");
+    let text;
+    if (isPdfFile(file)) {
+      flash(aboutMeFileStatus, "Extracting text with AI...");
+      const base64 = await fileToBase64(file);
+      const response = await chrome.runtime.sendMessage({ type: "EXTRACT_DOCUMENT_TEXT", base64 });
+      if (response.error) throw new Error(response.error);
+      text = response.text;
+    } else if (isDocx(file)) {
+      flash(aboutMeFileStatus, "Extracting text from .docx...");
+      text = await extractDocxText(await fileToArrayBuffer(file));
+    } else {
+      text = await fileToText(file);
+    }
+
+    if (!text || !text.trim()) {
+      flash(aboutMeFileStatus, "Couldn't find any text in that file.", true);
+      return;
+    }
+
+    await addAboutMeNote(label, text.trim());
+    aboutMeFileLabelInput.value = "";
+    flash(aboutMeFileStatus, `Added "${label}".`);
+  } catch (err) {
+    flash(aboutMeFileStatus, err.message, true);
+  } finally {
+    aboutMeFileInput.value = "";
+  }
 });
 
 // ---- Resources ----
@@ -452,7 +554,7 @@ exportBackupBtn.addEventListener("click", async () => {
     const data = await chrome.storage.local.get([
       "cvData",
       "coverLetterText",
-      "aboutMeText",
+      "aboutMeNotes",
       "resources",
       "cvStyle",
     ]);

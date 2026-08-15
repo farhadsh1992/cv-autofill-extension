@@ -93,11 +93,13 @@ AFTER INSTALLING (any browser)
    "Download PDF", or click "Insert into page field" if found.
 7. Or click "Generate tailored CV (Word)" to download a .docx CV with your
    real content re-emphasized for that specific job (never invents facts).
-8. In Options, under "Resources", add links to your own websites (fetched
-   once, with your permission per site) and free-form "About me" notes —
-   both get used as extra context everywhere the AI is involved. The
-   popup's "Add info" button opens a small window for jotting down more
-   of the same on the fly.
+8. In Options, under "About me / notes", add as many labeled notes as you
+   want, or upload a PDF/.docx/.txt file (a diploma, certificate, etc.) to
+   have its text saved as a labeled note automatically. Under "Resources",
+   add links to your own websites (fetched once, with your permission per
+   site). Both feed into everywhere the AI is involved. The popup's "Add
+   info" button opens a small window for jotting down more of the same on
+   the fly.
 9. Stuck on a question autofill couldn't answer? Click "Ask AI directly"
    in the popup for a quick, CV-grounded answer you can paste in yourself.
 10. Options > Export backup downloads a single JSON snapshot of all of the
