@@ -179,7 +179,7 @@ truth, always live, always current, editable/removable right there in
 Options regardless of what happens with any exported file.
 
 Every save also writes a fresh `<file name>.docx` (a landscape table:
-Job title / Company / Location / Requirements / Link / Results) and a
+Job title / Company / Date / Location / Requirements / Link / Results) and a
 matching `.json` straight to your browser's default downloads folder — no
 save dialog, and each save overwrites the same file (`conflictAction:
 "overwrite"`) instead of piling up `(1)`, `(2)`, ... copies like a normal

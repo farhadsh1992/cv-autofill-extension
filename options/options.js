@@ -820,7 +820,7 @@ function renderJobsTable(jobs) {
 
   const thead = document.createElement("thead");
   thead.innerHTML =
-    "<tr><th>Job title</th><th>Company</th><th>Location</th><th>Requirements</th><th>Link</th><th>Results</th><th></th></tr>";
+    "<tr><th>Job title</th><th>Company</th><th>Date</th><th>Location</th><th>Requirements</th><th>Link</th><th>Results</th><th></th></tr>";
   table.appendChild(thead);
 
   const tbody = document.createElement("tbody");
@@ -834,6 +834,10 @@ function renderJobsTable(jobs) {
     const companyTd = document.createElement("td");
     companyTd.textContent = job.company || "";
     tr.appendChild(companyTd);
+
+    const dateTd = document.createElement("td");
+    dateTd.textContent = docxFormatJobDate(job.addedAt);
+    tr.appendChild(dateTd);
 
     const locationTd = document.createElement("td");
     locationTd.textContent = job.location || "";
