@@ -55,7 +55,11 @@ function shadeColor(hex, amount) {
 }
 
 async function applyTheme() {
-  const { theme = "system", accentColor = "" } = await chrome.storage.local.get(["theme", "accentColor"]);
+  const { theme = "system", accentColor = "", saveJobColor = "" } = await chrome.storage.local.get([
+    "theme",
+    "accentColor",
+    "saveJobColor",
+  ]);
   const root = document.documentElement.style;
   const varNames = Object.keys(THEME_PALETTES.light);
 
@@ -73,10 +77,20 @@ async function applyTheme() {
     root.removeProperty("--accent");
     root.removeProperty("--accent-hover");
   }
+
+  // Independent of --accent — the "Save this job" button has its own color,
+  // defaulting to green (set in popup.css) rather than following the theme.
+  if (saveJobColor) {
+    root.setProperty("--save-job-bg", saveJobColor);
+    root.setProperty("--save-job-bg-hover", shadeColor(saveJobColor, -28));
+  } else {
+    root.removeProperty("--save-job-bg");
+    root.removeProperty("--save-job-bg-hover");
+  }
 }
 
 applyTheme();
 
 chrome.storage.onChanged.addListener((changes, area) => {
-  if (area === "local" && (changes.theme || changes.accentColor)) applyTheme();
+  if (area === "local" && (changes.theme || changes.accentColor || changes.saveJobColor)) applyTheme();
 });

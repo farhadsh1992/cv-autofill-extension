@@ -12,6 +12,8 @@
   --success: #2a8f3f;
   --disabled-bg: #c7c7cc;
   --textarea-bg: #ffffff;
+  --save-job-bg: #2a8f3f;
+  --save-job-bg-hover: #23792f;
 }
 
 @media (prefers-color-scheme: dark) {
@@ -28,6 +30,8 @@
     --success: #32d74b;
     --disabled-bg: #48484a;
     --textarea-bg: #2c2c2e;
+    --save-job-bg: #32d74b;
+    --save-job-bg-hover: #28ad3c;
   }
 }
 
@@ -165,6 +169,18 @@ button.secondary {
 
 button.secondary:hover {
   background: var(--panel-hover);
+}
+
+header button.secondary {
+  width: 100%;
+}
+
+#saveJobBtn {
+  background: var(--save-job-bg);
+}
+
+#saveJobBtn:not(:disabled):hover {
+  background: var(--save-job-bg-hover);
 }
 
 .hidden {

@@ -6,6 +6,10 @@ const accentColorInput = document.getElementById("accentColor");
 const resetAccentBtn = document.getElementById("resetAccentBtn");
 const DEFAULT_ACCENT_COLOR = "#0a84ff";
 
+const saveJobColorInput = document.getElementById("saveJobColorInput");
+const resetSaveJobColorBtn = document.getElementById("resetSaveJobColorBtn");
+const DEFAULT_SAVE_JOB_COLOR = "#2a8f3f";
+
 const activeProviderSelect = document.getElementById("activeProvider");
 
 const taskProviderSelects = {
@@ -106,6 +110,7 @@ async function init() {
     "taskProviders",
     "theme",
     "accentColor",
+    "saveJobColor",
     "cvData",
     "cvStyle",
     "coverLetterText",
@@ -129,6 +134,7 @@ async function init() {
   const theme = stored.theme || "system";
   for (const radio of themeRadios) radio.checked = radio.value === theme;
   accentColorInput.value = stored.accentColor || DEFAULT_ACCENT_COLOR;
+  saveJobColorInput.value = stored.saveJobColor || DEFAULT_SAVE_JOB_COLOR;
 
   const taskProviders = stored.taskProviders || {};
   for (const [task, select] of Object.entries(taskProviderSelects)) {
@@ -200,6 +206,15 @@ accentColorInput.addEventListener("input", () => {
 resetAccentBtn.addEventListener("click", () => {
   accentColorInput.value = DEFAULT_ACCENT_COLOR;
   chrome.storage.local.remove("accentColor");
+});
+
+saveJobColorInput.addEventListener("input", () => {
+  chrome.storage.local.set({ saveJobColor: saveJobColorInput.value });
+});
+
+resetSaveJobColorBtn.addEventListener("click", () => {
+  saveJobColorInput.value = DEFAULT_SAVE_JOB_COLOR;
+  chrome.storage.local.remove("saveJobColor");
 });
 
 function looksLikeUrl(value) {
@@ -729,6 +744,7 @@ const BACKUP_KEYS = [
   "taskProviders",
   "theme",
   "accentColor",
+  "saveJobColor",
   "cvData",
   "cvStyle",
   "coverLetterText",
