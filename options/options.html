@@ -16,6 +16,7 @@
       <button class="tabBtn active" data-tab="appearance">Appearance</button>
       <button class="tabBtn" data-tab="ai">AI</button>
       <button class="tabBtn" data-tab="info">Info</button>
+      <button class="tabBtn" data-tab="jobs">Jobs</button>
     </nav>
 
     <!-- ==================== Appearance ==================== -->
@@ -356,9 +357,58 @@
       </section>
     </div>
 
+    <!-- ==================== Jobs ==================== -->
+    <div class="tabPanel" id="tab-jobs">
+      <section>
+        <h2>Save job settings</h2>
+        <p class="muted">
+          Configures "Save this job" in the popup — extracts job title,
+          company, location, and requirements from the current page with AI.
+        </p>
+        <label class="muted" for="taskProviderSaveJob" style="display: block; margin-top: 8px">Model for extracting job details</label>
+        <select id="taskProviderSaveJob">
+          <option value="">Active provider</option>
+          <option value="openai">OpenAI</option>
+          <option value="anthropic">Anthropic (Claude)</option>
+          <option value="kimi">Kimi (Moonshot)</option>
+          <option value="gemini">Gemini (Google)</option>
+        </select>
+
+        <label class="muted" for="jobsFileName" style="display: block; margin-top: 10px">File name (used for both .docx and .json)</label>
+        <input type="text" id="jobsFileName" placeholder="applied jobs" />
+
+        <div class="row">
+          <button id="saveJobSettingsBtn">Save</button>
+          <span id="jobSettingsStatus" class="muted"></span>
+        </div>
+      </section>
+
+      <hr />
+
+      <section>
+        <h2>Applied jobs</h2>
+        <p class="muted">
+          Every "Save this job" click in the popup adds a row here, then
+          downloads a fresh Word (.docx) table and a JSON file with
+          everything below — browsers can't silently keep writing to one
+          file on disk, so pick the <strong>same file/folder each time</strong>
+          you're asked, to keep one running table. This table itself is
+          always live here regardless of what you do with the downloads —
+          edit "Results" or remove a row any time, then re-export to get an
+          updated file.
+        </p>
+        <div class="row">
+          <button id="exportJobsBtn" class="secondary">Export Word + JSON</button>
+          <span id="jobsExportStatus" class="muted"></span>
+        </div>
+        <div id="jobsTableWrap" style="margin-top: 12px"></div>
+      </section>
+    </div>
+
     <script src="../shared/theme.js"></script>
     <script src="../shared/copy-status.js"></script>
     <script src="../lib/docx.js"></script>
+    <script src="../lib/docx-writer.js"></script>
     <script src="options.js"></script>
   </body>
 </html>

@@ -10,6 +10,7 @@ const insertBtn = document.getElementById("insertBtn");
 const generateCvDocxBtn = document.getElementById("generateCvDocxBtn");
 const addInfoBtn = document.getElementById("addInfoBtn");
 const askBtn = document.getElementById("askBtn");
+const saveJobBtn = document.getElementById("saveJobBtn");
 const statusEl = document.getElementById("status");
 
 openOptionsBtn.addEventListener("click", () => chrome.runtime.openOptionsPage());
@@ -72,6 +73,7 @@ addInfoBtn.addEventListener("click", () => {
 askBtn.addEventListener("click", () => {
   chrome.windows.create({ url: chrome.runtime.getURL("windows/ask.html"), type: "popup", width: 460, height: 520, focused: true });
 });
+saveJobBtn.addEventListener("click", handleSaveJob);
 
 async function handleAutofill() {
   autofillBtn.disabled = true;
@@ -254,6 +256,40 @@ async function handleGenerateCvDocx() {
     setStatus(err.message, true);
   } finally {
     generateCvDocxBtn.disabled = false;
+  }
+}
+
+// Extraction, storage, and the actual downloads all happen in the
+// background service worker (not here) — chrome.downloads.download with
+// saveAs:true opens a native dialog that steals focus, and an MV3 popup
+// closes itself the instant it loses focus, which would kill this function
+// mid-flight before the second (or even first) download finished.
+async function handleSaveJob() {
+  saveJobBtn.disabled = true;
+  try {
+    setStatus("Reading this page for job details...");
+    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
+    const [{ result: scraped }] = await chrome.scripting.executeScript({
+      target: { tabId: tab.id },
+      func: scrapeJobContextInPage,
+    });
+    const jobContext = [scraped.title, scraped.metaDesc, scraped.bodyText].filter(Boolean).join("\n\n").slice(0, 6000);
+
+    setStatus("Extracting job details and saving — choose where to save when asked...");
+    chrome.runtime.sendMessage({ type: "SAVE_JOB", jobContext, url: tab.url || "" }).then((response) => {
+      if (response && !response.error) {
+        setStatus(`Saved "${response.job.title || "this job"}".`);
+      } else if (response && response.error) {
+        setStatus(response.error, true);
+      }
+    });
+    // Intentionally not awaited above — the popup may close (focus lost to
+    // the save dialog) before that promise resolves, and that's fine: the
+    // save itself runs to completion in the background regardless.
+  } catch (err) {
+    setStatus(err.message, true);
+  } finally {
+    saveJobBtn.disabled = false;
   }
 }
 

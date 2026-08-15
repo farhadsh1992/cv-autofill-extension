@@ -80,6 +80,14 @@ const addResourceUrlBtn = document.getElementById("addResourceUrl");
 const resourceUrlStatus = document.getElementById("resourceUrlStatus");
 const resourceListEl = document.getElementById("resourceList");
 
+const taskProviderSaveJobSelect = document.getElementById("taskProviderSaveJob");
+const jobsFileNameInput = document.getElementById("jobsFileName");
+const saveJobSettingsBtn = document.getElementById("saveJobSettingsBtn");
+const jobSettingsStatus = document.getElementById("jobSettingsStatus");
+const exportJobsBtn = document.getElementById("exportJobsBtn");
+const jobsExportStatus = document.getElementById("jobsExportStatus");
+const jobsTableWrapEl = document.getElementById("jobsTableWrap");
+
 // ---- Tabs ----
 
 for (const btn of tabBtns) {
@@ -106,6 +114,8 @@ async function init() {
     "resources",
     "addresses",
     "usage",
+    "savedJobs",
+    "jobsFileName",
     // legacy single/dual-provider keys from before multi-provider support
     "provider",
     "openaiApiKey",
@@ -124,6 +134,9 @@ async function init() {
   for (const [task, select] of Object.entries(taskProviderSelects)) {
     select.value = taskProviders[task] || "";
   }
+  taskProviderSaveJobSelect.value = taskProviders.saveJob || "";
+  jobsFileNameInput.value = stored.jobsFileName || "applied jobs";
+  renderJobsTable(stored.savedJobs || []);
 
   let providers = stored.providers;
   let activeProvider = stored.activeProvider;
@@ -204,7 +217,10 @@ saveBtn.addEventListener("click", async () => {
     providers[id] = { apiKey, model: fields.modelSelect.value };
   }
 
-  const taskProviders = {};
+  // Merge onto whatever's already stored (rather than replacing wholesale) so
+  // this doesn't clobber the Jobs tab's own taskProviders.saveJob setting.
+  const { taskProviders: existingTaskProviders = {} } = await chrome.storage.local.get("taskProviders");
+  const taskProviders = { ...existingTaskProviders };
   for (const [task, select] of Object.entries(taskProviderSelects)) {
     taskProviders[task] = select.value;
   }
@@ -720,6 +736,8 @@ const BACKUP_KEYS = [
   "resources",
   "addresses",
   "usage",
+  "savedJobs",
+  "jobsFileName",
 ];
 
 exportBackupBtn.addEventListener("click", async () => {
@@ -757,5 +775,133 @@ importBackupInput.addEventListener("change", async () => {
     flash(backupStatusEl, `Import failed: ${err.message}`, true);
   } finally {
     importBackupInput.value = "";
+  }
+});
+
+// ---- Jobs ----
+
+function bytesToDataUrl(bytes, mimeType) {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return `data:${mimeType};base64,${btoa(binary)}`;
+}
+
+function renderJobsTable(jobs) {
+  jobsTableWrapEl.innerHTML = "";
+  if (!jobs.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No jobs saved yet — use \"Save this job\" in the popup on a job posting page.";
+    jobsTableWrapEl.appendChild(empty);
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className = "jobsTable";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML =
+    "<tr><th>Job title</th><th>Company</th><th>Location</th><th>Requirements</th><th>Link</th><th>Results</th><th></th></tr>";
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for (const job of jobs.slice().reverse()) {
+    const tr = document.createElement("tr");
+
+    const titleTd = document.createElement("td");
+    titleTd.textContent = job.title || "";
+    tr.appendChild(titleTd);
+
+    const companyTd = document.createElement("td");
+    companyTd.textContent = job.company || "";
+    tr.appendChild(companyTd);
+
+    const locationTd = document.createElement("td");
+    locationTd.textContent = job.location || "";
+    tr.appendChild(locationTd);
+
+    const reqTd = document.createElement("td");
+    reqTd.textContent = job.requirements || "";
+    tr.appendChild(reqTd);
+
+    const linkTd = document.createElement("td");
+    linkTd.className = "jobsLink";
+    if (job.link) {
+      const a = document.createElement("a");
+      a.href = job.link;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = job.link;
+      a.title = job.link;
+      linkTd.appendChild(a);
+    }
+    tr.appendChild(linkTd);
+
+    const resultsTd = document.createElement("td");
+    const resultsArea = document.createElement("textarea");
+    resultsArea.rows = 2;
+    resultsArea.value = job.results || "";
+    resultsArea.placeholder = "e.g. Interviewed, Rejected, Offer...";
+    resultsArea.addEventListener("change", async () => {
+      const { savedJobs: current = [] } = await chrome.storage.local.get("savedJobs");
+      const target = current.find((j) => j.id === job.id);
+      if (target) {
+        target.results = resultsArea.value;
+        await chrome.storage.local.set({ savedJobs: current });
+      }
+    });
+    resultsTd.appendChild(resultsArea);
+    tr.appendChild(resultsTd);
+
+    const removeTd = document.createElement("td");
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "secondary";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", async () => {
+      const { savedJobs: current = [] } = await chrome.storage.local.get("savedJobs");
+      const next = current.filter((j) => j.id !== job.id);
+      await chrome.storage.local.set({ savedJobs: next });
+      renderJobsTable(next);
+    });
+    removeTd.appendChild(removeBtn);
+    tr.appendChild(removeTd);
+
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  jobsTableWrapEl.appendChild(table);
+}
+
+saveJobSettingsBtn.addEventListener("click", async () => {
+  // Merge onto whatever's already stored so this doesn't clobber the AI
+  // tab's autofill/tailorCv/coverLetter provider choices.
+  const { taskProviders: existingTaskProviders = {} } = await chrome.storage.local.get("taskProviders");
+  const taskProviders = { ...existingTaskProviders, saveJob: taskProviderSaveJobSelect.value };
+  const jobsFileName = jobsFileNameInput.value.trim() || "applied jobs";
+
+  await chrome.storage.local.set({ taskProviders, jobsFileName });
+  flash(jobSettingsStatus, "Saved.");
+});
+
+exportJobsBtn.addEventListener("click", async () => {
+  try {
+    flash(jobsExportStatus, "Exporting...");
+    const { savedJobs = [], jobsFileName = "applied jobs" } = await chrome.storage.local.get(["savedJobs", "jobsFileName"]);
+    const baseName = (jobsFileName || "applied jobs").trim() || "applied jobs";
+
+    const docxBytes = generateJobsDocx(savedJobs);
+    const docxUrl = bytesToDataUrl(docxBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    await chrome.downloads.download({ url: docxUrl, filename: `${baseName}.docx`, saveAs: true });
+
+    const jsonBytes = new TextEncoder().encode(JSON.stringify(savedJobs, null, 2));
+    const jsonUrl = bytesToDataUrl(jsonBytes, "application/json");
+    await chrome.downloads.download({ url: jsonUrl, filename: `${baseName}.json`, saveAs: true });
+
+    flash(jobsExportStatus, "Exported.");
+  } catch (err) {
+    flash(jobsExportStatus, err.message, true);
   }
 });

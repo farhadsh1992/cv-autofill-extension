@@ -120,7 +120,16 @@ AFTER INSTALLING (any browser)
    opens a small window for jotting down more of the same on the fly.
 10. Stuck on a question autofill couldn't answer? Click "Ask AI directly"
     in the popup for a quick, CV-grounded answer you can paste in yourself.
-11. Info tab > Backup: "Export backup" downloads a single JSON snapshot of
+11. Applying to something worth tracking? Click "Save this job" at the
+    bottom of the popup — it extracts the job title/company/location/a
+    short requirements summary with AI and adds a row to an "applied jobs"
+    table you can see and edit in the Jobs tab. It also downloads a fresh
+    Word (.docx) and .json file with the whole table each time — pick the
+    same file/folder in the two save dialogs to keep one running file, or
+    just ignore those dialogs and use the live table in Options > Jobs
+    instead (edit Results, remove rows, re-export any time from there).
+    Set which model does the extraction and the file name in Options > Jobs.
+12. Info tab > Backup: "Export backup" downloads a single JSON snapshot of
     all of the above, including your saved API keys, so "Import backup" on
     a fresh install or new browser can restore everything at once. This
     file contains your API keys in plain text — keep it private, never

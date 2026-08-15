@@ -303,3 +303,47 @@ code {
   border-radius: 6px;
   border: 1px solid var(--border);
 }
+
+#jobsTableWrap {
+  overflow-x: auto;
+}
+
+.jobsTable {
+  width: 100%;
+  min-width: 720px;
+  border-collapse: collapse;
+  font-size: 12px;
+}
+
+.jobsTable th,
+.jobsTable td {
+  border: 1px solid var(--border);
+  padding: 6px 8px;
+  text-align: left;
+  vertical-align: top;
+}
+
+.jobsTable th {
+  background: var(--panel);
+  white-space: nowrap;
+}
+
+.jobsTable td.jobsLink {
+  max-width: 160px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.jobsTable textarea {
+  width: 100%;
+  min-width: 140px;
+  font-size: 12px;
+  margin-top: 0;
+  padding: 4px 6px;
+}
+
+.jobsTable button.secondary {
+  padding: 4px 8px;
+  font-size: 11px;
+}

@@ -54,7 +54,15 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
    autofill couldn't confidently answer something — it uses your saved CV
    and resources as context and gives you a direct answer to copy in
    yourself.
-8. **Options → About me / notes**: add as many labeled notes as you want —
+8. **Save this job** (popup button) scrapes the current page, asks the model
+   to pull out the job title/company/location/a short requirements summary,
+   and adds a row to an "applied jobs" table kept in the extension's own
+   storage — viewable, editable, and removable any time in **Options → Jobs**.
+   Each save also downloads a fresh Word (`.docx`) table and a matching
+   `.json` file with everything in it; pick the same file/folder in the save
+   dialogs each time to keep one running table (see the Backup section below
+   for why it works this way instead of silently writing to one file).
+9. **Options → About me / notes**: add as many labeled notes as you want —
    availability, preferences, anything not in your CV — or upload a PDF,
    Word (.docx), or .txt file (a diploma, certificate, reference letter) and
    its text is extracted and saved as a labeled note the same way. **Options
@@ -83,8 +91,8 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
 
 ## Options page layout
 
-The Options page is split into three tabs: **Appearance**, **AI**, and
-**Info**.
+The Options page is split into four tabs: **Appearance**, **AI**, **Info**,
+and **Jobs**.
 
 - **Appearance** — Theme (System/Light/Dark, overriding your OS everywhere
   in the extension — popup, options, and the small windows) and Button color
@@ -98,6 +106,9 @@ The Options page is split into three tabs: **Appearance**, **AI**, and
   defaults to "Active provider" until set otherwise.
 - **Info** — your CV, cover letter, About Me notes, addresses, resources,
   and backup export/import. Everything the AI draws on as context.
+- **Jobs** — which model extracts job details for "Save this job", the
+  export file name, and the live table of every job you've saved (edit
+  Results, remove rows, re-export any time).
 
 ## Setup
 
@@ -149,6 +160,23 @@ Plain Export/Import via the browser's normal file dialogs works reliably
 everywhere this extension runs, so that's what's here instead.) The
 extension always reads from its own internal storage either way — a backup
 file is just a snapshot, never the source of truth.
+
+### Applied jobs
+
+**Save this job** (popup) and **Options → Jobs** share the same underlying
+table (`chrome.storage.local`, key `savedJobs`) — that's the real source of
+truth, always live, always current, editable/removable right there in
+Options regardless of what happens with any exported file.
+
+Every save also downloads a fresh `<file name>.docx` (a landscape table:
+Job title / Company / Location / Requirements / Link / Results) and a
+matching `.json`, via the browser's normal save dialog. For the same reason
+described under Backup above — no reliable way for an extension to silently
+keep writing to one file across browser sessions — this means one save
+dialog per file per save, not a silent single-file update. Pick the same
+file/folder each time (overwrite when asked) to keep one running table on
+disk; if you'd rather not deal with the dialogs every time, skip them and
+just use the live table in Options → Jobs, exporting on demand instead.
 
 ## Load it in Firefox (development / personal use)
 
@@ -202,7 +230,8 @@ shared/blocklist.js     Sensitive-field keyword filter, shared by background + p
 shared/theme.js         Applies manual theme/accent-color overrides on every page
 lib/docx.js             Standalone .docx → plain text/style extractor (no external library)
 lib/pdf-writer.js       Standalone plain text → PDF writer (no external library)
-lib/docx-writer.js      Standalone plain data → .docx writer, with optional photo/color (no external library)
+lib/docx-writer.js      Standalone plain data → .docx writer (CV template + optional photo/color,
+                        plus a plain bordered-table doc used for the applied-jobs export)
 popup/                  Toolbar popup UI — autofill, cover letter, tailored CV, add info, ask AI
 options/                Appearance/AI/Info tabs — theme & color, provider keys & per-action model
                         routing & spend estimate, CV/cover letter upload, about me, addresses,

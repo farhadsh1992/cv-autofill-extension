@@ -1,4 +1,4 @@
-importScripts("shared/blocklist.js");
+importScripts("shared/blocklist.js", "lib/docx-writer.js");
 
 const OPENAI_URL = "https://api.openai.com/v1/responses";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
@@ -131,6 +131,12 @@ Answer the question directly and concisely, grounded only in the given informati
 
 Respond as JSON: {"answer": "..."}. Respond with JSON only — no markdown code fences, no commentary.`;
 
+const JOB_EXTRACT_PROMPT = `Extract details about the job posting described in this scraped page text.
+Respond as JSON with exactly this shape: {"title": "", "company": "", "location": "", "requirements": ""}.
+"requirements" should be a short 1-3 sentence summary of the key requirements/qualifications — not the full posting.
+Use "" for anything not found in the text. Do not invent details that aren't there.
+Respond with JSON only — no markdown code fences, no commentary.`;
+
 // Caps keep prompts (and cost) bounded even if the applicant saves a lot of resources.
 const MAX_RESOURCES_IN_CONTEXT = 8;
 const MAX_RESOURCE_CHARS = 1500;
@@ -214,6 +220,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
   if (msg.type === "EXTRACT_DOCUMENT_TEXT") {
     handleExtractDocumentText(msg)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
+  if (msg.type === "SAVE_JOB") {
+    handleSaveJob(msg)
       .then(sendResponse)
       .catch((err) => sendResponse({ error: err.message }));
     return true;
@@ -529,4 +541,51 @@ ${question.trim()}`;
 
   const result = await callAI([{ type: "text", text: prompt }]);
   return { answer: (result.answer || "").trim() };
+}
+
+function bgBytesToDataUrl(bytes, mimeType) {
+  let binary = "";
+  const chunk = 0x8000;
+  for (let i = 0; i < bytes.length; i += chunk) {
+    binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunk));
+  }
+  return `data:${mimeType};base64,${btoa(binary)}`;
+}
+
+// Runs entirely in the background (not the popup) on purpose: the two
+// saveAs:true download dialogs below steal focus, and an MV3 popup closes
+// itself the instant it loses focus — killing any script still running in
+// it. The service worker has no such lifecycle tie to the popup, so both
+// downloads reliably fire even if the popup that triggered this is long gone.
+async function handleSaveJob({ jobContext, url }) {
+  const { taskProviders = {} } = await chrome.storage.local.get("taskProviders");
+  const prompt = `${JOB_EXTRACT_PROMPT}\n\nPAGE_TEXT:\n${jobContext || "(not available)"}`;
+  const extracted = await callAI([{ type: "text", text: prompt }], taskProviders.saveJob);
+
+  const { savedJobs = [] } = await chrome.storage.local.get("savedJobs");
+  const job = {
+    id: crypto.randomUUID(),
+    title: (extracted.title || "").trim(),
+    company: (extracted.company || "").trim(),
+    location: (extracted.location || "").trim(),
+    requirements: (extracted.requirements || "").trim(),
+    link: url || "",
+    results: "",
+    addedAt: Date.now(),
+  };
+  savedJobs.push(job);
+  await chrome.storage.local.set({ savedJobs });
+
+  const { jobsFileName = "applied jobs" } = await chrome.storage.local.get("jobsFileName");
+  const baseName = (jobsFileName || "applied jobs").trim() || "applied jobs";
+
+  const docxBytes = generateJobsDocx(savedJobs);
+  const docxUrl = bgBytesToDataUrl(docxBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+  await chrome.downloads.download({ url: docxUrl, filename: `${baseName}.docx`, saveAs: true });
+
+  const jsonBytes = new TextEncoder().encode(JSON.stringify(savedJobs, null, 2));
+  const jsonUrl = bgBytesToDataUrl(jsonBytes, "application/json");
+  await chrome.downloads.download({ url: jsonUrl, filename: `${baseName}.json`, saveAs: true });
+
+  return { job };
 }
