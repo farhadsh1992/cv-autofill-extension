@@ -60,10 +60,9 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
    to pull out the job title/company/location/a short requirements summary,
    and adds a row to an "applied jobs" table kept in the extension's own
    storage — viewable, editable, and removable any time in **Options → Jobs**.
-   Each save also downloads a fresh Word (`.docx`) table and a matching
-   `.json` file with everything in it; pick the same file/folder in the save
-   dialogs each time to keep one running table (see the Backup section below
-   for why it works this way instead of silently writing to one file).
+   Each save also writes a fresh Word (`.docx`) table and a matching `.json`
+   file with everything in it straight to your Downloads folder — no dialog,
+   overwriting the same file each time (see the Applied jobs section below).
 9. **Options → About me / notes**: add as many labeled notes as you want —
    availability, preferences, anything not in your CV — or upload a PDF,
    Word (.docx), or .txt file (a diploma, certificate, reference letter) and
@@ -170,15 +169,15 @@ table (`chrome.storage.local`, key `savedJobs`) — that's the real source of
 truth, always live, always current, editable/removable right there in
 Options regardless of what happens with any exported file.
 
-Every save also downloads a fresh `<file name>.docx` (a landscape table:
+Every save also writes a fresh `<file name>.docx` (a landscape table:
 Job title / Company / Location / Requirements / Link / Results) and a
-matching `.json`, via the browser's normal save dialog. For the same reason
-described under Backup above — no reliable way for an extension to silently
-keep writing to one file across browser sessions — this means one save
-dialog per file per save, not a silent single-file update. Pick the same
-file/folder each time (overwrite when asked) to keep one running table on
-disk; if you'd rather not deal with the dialogs every time, skip them and
-just use the live table in Options → Jobs, exporting on demand instead.
+matching `.json` straight to your browser's default downloads folder — no
+save dialog, and each save overwrites the same file (`conflictAction:
+"overwrite"`) instead of piling up `(1)`, `(2)`, ... copies like a normal
+repeated download would. Unlike Backup above, this one doesn't let you pick
+a custom location — it trades that off for a one-click save with nothing to
+confirm. If you want the files somewhere else, move them after the fact, or
+just skip them and use the live table in Options → Jobs directly.
 
 ## Load it in Firefox (development / personal use)
 

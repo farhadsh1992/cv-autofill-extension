@@ -400,13 +400,11 @@
         <h2>Applied jobs</h2>
         <p class="muted">
           Every "Save this job" click in the popup adds a row here, then
-          downloads a fresh Word (.docx) table and a JSON file with
-          everything below — browsers can't silently keep writing to one
-          file on disk, so pick the <strong>same file/folder each time</strong>
-          you're asked, to keep one running table. This table itself is
-          always live here regardless of what you do with the downloads —
-          edit "Results" or remove a row any time, then re-export to get an
-          updated file.
+          saves a fresh Word (.docx) table and a JSON file with everything
+          below straight to your Downloads folder — no dialog, and each
+          save overwrites the same file rather than piling up copies. This
+          table itself is always live here regardless — edit "Results" or
+          remove a row any time, then re-export to get an updated file.
         </p>
         <div class="row">
           <button id="exportJobsBtn" class="secondary">Export Word + JSON</button>

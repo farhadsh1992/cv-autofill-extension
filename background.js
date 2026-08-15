@@ -552,11 +552,9 @@ function bgBytesToDataUrl(bytes, mimeType) {
   return `data:${mimeType};base64,${btoa(binary)}`;
 }
 
-// Runs entirely in the background (not the popup) on purpose: the two
-// saveAs:true download dialogs below steal focus, and an MV3 popup closes
-// itself the instant it loses focus — killing any script still running in
-// it. The service worker has no such lifecycle tie to the popup, so both
-// downloads reliably fire even if the popup that triggered this is long gone.
+// Runs entirely in the background (not the popup) on purpose: the service
+// worker has no lifecycle tie to the popup, so both downloads below reliably
+// fire even if the popup that triggered this has since closed.
 async function handleSaveJob({ jobContext, url }) {
   const { taskProviders = {} } = await chrome.storage.local.get("taskProviders");
   const prompt = `${JOB_EXTRACT_PROMPT}\n\nPAGE_TEXT:\n${jobContext || "(not available)"}`;
@@ -579,13 +577,16 @@ async function handleSaveJob({ jobContext, url }) {
   const { jobsFileName = "applied jobs" } = await chrome.storage.local.get("jobsFileName");
   const baseName = (jobsFileName || "applied jobs").trim() || "applied jobs";
 
+  // saveAs:false + conflictAction:"overwrite" — no dialog, and each save
+  // replaces the same file in the browser's default downloads location
+  // instead of piling up "(1)", "(2)", ... copies.
   const docxBytes = generateJobsDocx(savedJobs);
   const docxUrl = bgBytesToDataUrl(docxBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-  await chrome.downloads.download({ url: docxUrl, filename: `${baseName}.docx`, saveAs: true });
+  await chrome.downloads.download({ url: docxUrl, filename: `${baseName}.docx`, saveAs: false, conflictAction: "overwrite" });
 
   const jsonBytes = new TextEncoder().encode(JSON.stringify(savedJobs, null, 2));
   const jsonUrl = bgBytesToDataUrl(jsonBytes, "application/json");
-  await chrome.downloads.download({ url: jsonUrl, filename: `${baseName}.json`, saveAs: true });
+  await chrome.downloads.download({ url: jsonUrl, filename: `${baseName}.json`, saveAs: false, conflictAction: "overwrite" });
 
   return { job };
 }

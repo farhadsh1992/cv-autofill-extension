@@ -260,10 +260,9 @@ async function handleGenerateCvDocx() {
 }
 
 // Extraction, storage, and the actual downloads all happen in the
-// background service worker (not here) — chrome.downloads.download with
-// saveAs:true opens a native dialog that steals focus, and an MV3 popup
-// closes itself the instant it loses focus, which would kill this function
-// mid-flight before the second (or even first) download finished.
+// background service worker (not here), so the save still completes even
+// if this popup closes mid-flight (e.g. the user clicks away) before the
+// response comes back.
 async function handleSaveJob() {
   saveJobBtn.disabled = true;
   try {
@@ -275,7 +274,7 @@ async function handleSaveJob() {
     });
     const jobContext = [scraped.title, scraped.metaDesc, scraped.bodyText].filter(Boolean).join("\n\n").slice(0, 6000);
 
-    setStatus("Extracting job details and saving — choose where to save when asked...");
+    setStatus("Extracting job details and saving...");
     chrome.runtime.sendMessage({ type: "SAVE_JOB", jobContext, url: tab.url || "" }).then((response) => {
       if (response && !response.error) {
         setStatus(`Saved "${response.job.title || "this job"}".`);
@@ -283,9 +282,7 @@ async function handleSaveJob() {
         setStatus(response.error, true);
       }
     });
-    // Intentionally not awaited above — the popup may close (focus lost to
-    // the save dialog) before that promise resolves, and that's fine: the
-    // save itself runs to completion in the background regardless.
+    // Intentionally not awaited above — see the doc comment for why.
   } catch (err) {
     setStatus(err.message, true);
   } finally {

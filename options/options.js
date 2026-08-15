@@ -908,13 +908,15 @@ exportJobsBtn.addEventListener("click", async () => {
     const { savedJobs = [], jobsFileName = "applied jobs" } = await chrome.storage.local.get(["savedJobs", "jobsFileName"]);
     const baseName = (jobsFileName || "applied jobs").trim() || "applied jobs";
 
+    // saveAs:false + conflictAction:"overwrite" — no dialog, replaces the
+    // same file in the browser's default downloads location each time.
     const docxBytes = generateJobsDocx(savedJobs);
     const docxUrl = bytesToDataUrl(docxBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
-    await chrome.downloads.download({ url: docxUrl, filename: `${baseName}.docx`, saveAs: true });
+    await chrome.downloads.download({ url: docxUrl, filename: `${baseName}.docx`, saveAs: false, conflictAction: "overwrite" });
 
     const jsonBytes = new TextEncoder().encode(JSON.stringify(savedJobs, null, 2));
     const jsonUrl = bytesToDataUrl(jsonBytes, "application/json");
-    await chrome.downloads.download({ url: jsonUrl, filename: `${baseName}.json`, saveAs: true });
+    await chrome.downloads.download({ url: jsonUrl, filename: `${baseName}.json`, saveAs: false, conflictAction: "overwrite" });
 
     flash(jobsExportStatus, "Exported.");
   } catch (err) {
