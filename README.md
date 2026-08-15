@@ -162,6 +162,15 @@ everywhere this extension runs, so that's what's here instead.) The
 extension always reads from its own internal storage either way — a backup
 file is just a snapshot, never the source of truth.
 
+This same backup JSON is also what the [Mac app](https://github.com/farhadsh1992/cv-autofill-mac-app)'s
+own Export/Import backup reads and writes (Settings → Backup there) — export
+from one, import into the other, to move your CV, resources, applied jobs,
+and API keys across. It's manual, not automatic (the two run in completely
+separate sandboxes with no shared storage — see that repo's README for why),
+and a few things don't survive the trip either way: the Mac app doesn't
+support Kimi/Gemini keys or Addresses yet, and folds About Me notes into a
+single text field instead of keeping them labeled separately.
+
 ### Applied jobs
 
 **Save this job** (popup) and **Options → Jobs** share the same underlying
