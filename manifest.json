@@ -4,7 +4,12 @@
   "version": "0.1.0",
   "description": "Upload your CV once and auto-fill job application forms using AI. Nothing is ever auto-submitted.",
   "permissions": ["storage", "activeTab", "scripting", "downloads"],
-  "host_permissions": ["https://api.openai.com/*", "https://api.anthropic.com/*"],
+  "host_permissions": [
+    "https://api.openai.com/*",
+    "https://api.anthropic.com/*",
+    "https://api.moonshot.ai/*",
+    "https://generativelanguage.googleapis.com/*"
+  ],
   "optional_host_permissions": ["http://*/*", "https://*/*"],
   "background": {
     "service_worker": "background.js",

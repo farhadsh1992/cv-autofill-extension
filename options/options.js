@@ -1,17 +1,34 @@
-const providerSelect = document.getElementById("provider");
-const openaiSection = document.getElementById("openaiSection");
-const anthropicSection = document.getElementById("anthropicSection");
+const activeProviderSelect = document.getElementById("activeProvider");
 
-const openaiApiKeyInput = document.getElementById("openaiApiKey");
-const showOpenaiKeyBox = document.getElementById("showOpenaiKey");
-const openaiModelSelect = document.getElementById("openaiModel");
-
-const anthropicApiKeyInput = document.getElementById("anthropicApiKey");
-const showAnthropicKeyBox = document.getElementById("showAnthropicKey");
-const anthropicModelSelect = document.getElementById("anthropicModel");
+const PROVIDER_FIELD_IDS = {
+  openai: { apiKey: "openaiApiKey", showKey: "showOpenaiKey", model: "openaiModel" },
+  anthropic: { apiKey: "anthropicApiKey", showKey: "showAnthropicKey", model: "anthropicModel" },
+  kimi: { apiKey: "kimiApiKey", showKey: "showKimiKey", model: "kimiModel" },
+  gemini: { apiKey: "geminiApiKey", showKey: "showGeminiKey", model: "geminiModel" },
+};
+const providerFields = {};
+for (const [id, fieldIds] of Object.entries(PROVIDER_FIELD_IDS)) {
+  providerFields[id] = {
+    apiKeyInput: document.getElementById(fieldIds.apiKey),
+    showKeyBox: document.getElementById(fieldIds.showKey),
+    modelSelect: document.getElementById(fieldIds.model),
+  };
+}
 
 const saveBtn = document.getElementById("save");
 const saveStatus = document.getElementById("saveStatus");
+
+const totalSpentEl = document.getElementById("totalSpent");
+const spendByProviderEl = document.getElementById("spendByProvider");
+const resetSpendBtn = document.getElementById("resetSpendBtn");
+
+const addressLabelInput = document.getElementById("addressLabel");
+const addressContentArea = document.getElementById("addressContent");
+const addAddressBtn = document.getElementById("addAddressBtn");
+const addressStatus = document.getElementById("addressStatus");
+const addressListEl = document.getElementById("addressList");
+
+const importBackupInput = document.getElementById("importBackupInput");
 
 const cvFileInput = document.getElementById("cvFile");
 const cvFileStatus = document.getElementById("cvFileStatus");
@@ -53,31 +70,49 @@ init();
 
 async function init() {
   const stored = await chrome.storage.local.get([
-    "provider",
-    "openaiApiKey",
-    "anthropicApiKey",
-    "openaiModel",
-    "anthropicModel",
+    "providers",
+    "activeProvider",
     "cvData",
     "cvStyle",
     "coverLetterText",
     "aboutMeNotes",
     "aboutMeText", // legacy single-blob field, migrated below
     "resources",
-    // legacy single-provider keys from before multi-provider support
+    "addresses",
+    "usage",
+    // legacy single/dual-provider keys from before multi-provider support
+    "provider",
+    "openaiApiKey",
+    "anthropicApiKey",
+    "openaiModel",
+    "anthropicModel",
     "apiKey",
     "model",
   ]);
 
-  const provider = stored.provider || "openai";
-  const openaiApiKey = stored.openaiApiKey || stored.apiKey || "";
-  const openaiModel = stored.openaiModel || stored.model || "";
+  let providers = stored.providers;
+  let activeProvider = stored.activeProvider;
+  if (!providers) {
+    // one-time migration from the old single/dual-provider design
+    providers = {
+      openai: { apiKey: stored.openaiApiKey || stored.apiKey || "", model: stored.openaiModel || stored.model || "" },
+      anthropic: { apiKey: stored.anthropicApiKey || "", model: stored.anthropicModel || "" },
+      kimi: { apiKey: "", model: "" },
+      gemini: { apiKey: "", model: "" },
+    };
+    activeProvider = stored.provider || "openai";
+    await chrome.storage.local.set({ providers, activeProvider });
+    await chrome.storage.local.remove(["provider", "openaiApiKey", "anthropicApiKey", "openaiModel", "anthropicModel", "apiKey", "model"]);
+  }
+  activeProvider = activeProvider || "openai";
 
-  providerSelect.value = provider;
-  openaiApiKeyInput.value = openaiApiKey;
-  if (openaiModel) openaiModelSelect.value = openaiModel;
-  anthropicApiKeyInput.value = stored.anthropicApiKey || "";
-  if (stored.anthropicModel) anthropicModelSelect.value = stored.anthropicModel;
+  activeProviderSelect.value = activeProvider;
+  for (const [id, fields] of Object.entries(providerFields)) {
+    const cfg = providers[id] || {};
+    fields.apiKeyInput.value = cfg.apiKey || "";
+    if (cfg.model) fields.modelSelect.value = cfg.model;
+  }
+
   if (stored.cvData) cvJsonArea.value = JSON.stringify(stored.cvData, null, 2);
   if (stored.cvStyle) renderCvStyle(stored.cvStyle);
   if (stored.coverLetterText) coverLetterTextArea.value = stored.coverLetterText;
@@ -92,51 +127,57 @@ async function init() {
   renderAboutMeNotes(aboutMeNotes);
 
   renderResourceList(stored.resources || []);
-
-  updateVisibleSection();
+  renderAddressList(stored.addresses || []);
+  renderSpend(stored.usage || { totalSpentUSD: 0, byProvider: {} });
 }
 
-function updateVisibleSection() {
-  const isAnthropic = providerSelect.value === "anthropic";
-  openaiSection.style.display = isAnthropic ? "none" : "block";
-  anthropicSection.style.display = isAnthropic ? "block" : "none";
+for (const fields of Object.values(providerFields)) {
+  fields.showKeyBox.addEventListener("change", () => {
+    fields.apiKeyInput.type = fields.showKeyBox.checked ? "text" : "password";
+  });
 }
-
-providerSelect.addEventListener("change", updateVisibleSection);
-
-showOpenaiKeyBox.addEventListener("change", () => {
-  openaiApiKeyInput.type = showOpenaiKeyBox.checked ? "text" : "password";
-});
-showAnthropicKeyBox.addEventListener("change", () => {
-  anthropicApiKeyInput.type = showAnthropicKeyBox.checked ? "text" : "password";
-});
 
 function looksLikeUrl(value) {
   return value.includes("://");
 }
 
 saveBtn.addEventListener("click", async () => {
-  const openaiApiKey = openaiApiKeyInput.value.trim();
-  const anthropicApiKey = anthropicApiKeyInput.value.trim();
-
-  if (looksLikeUrl(openaiApiKey)) {
-    flash(saveStatus, "The OpenAI API key field has a URL in it, not a key — paste the actual sk-... key instead.", true);
-    return;
-  }
-  if (looksLikeUrl(anthropicApiKey)) {
-    flash(saveStatus, "The Anthropic API key field has a URL in it, not a key — paste the actual sk-ant-... key instead.", true);
-    return;
+  const providers = {};
+  for (const [id, fields] of Object.entries(providerFields)) {
+    const apiKey = fields.apiKeyInput.value.trim();
+    if (looksLikeUrl(apiKey)) {
+      flash(saveStatus, `The ${id} API key field has a URL in it, not a key — paste the actual key instead.`, true);
+      return;
+    }
+    providers[id] = { apiKey, model: fields.modelSelect.value };
   }
 
-  await chrome.storage.local.set({
-    provider: providerSelect.value,
-    openaiApiKey,
-    openaiModel: openaiModelSelect.value,
-    anthropicApiKey,
-    anthropicModel: anthropicModelSelect.value,
-  });
-  await chrome.storage.local.remove(["apiKey", "model"]);
+  await chrome.storage.local.set({ providers, activeProvider: activeProviderSelect.value });
   flash(saveStatus, "Saved.");
+});
+
+// ---- Spend estimate ----
+
+function renderSpend(usage) {
+  totalSpentEl.textContent = `$${(usage.totalSpentUSD || 0).toFixed(4)}`;
+  const byProvider = usage.byProvider || {};
+  const lines = Object.entries(byProvider)
+    .filter(([, b]) => (b.promptTokens || 0) + (b.completionTokens || 0) > 0)
+    .map(([id, b]) => `${PROVIDER_LABEL_NAMES[id] || id}: $${(b.spentUSD || 0).toFixed(4)} (${(b.promptTokens || 0) + (b.completionTokens || 0)} tokens)`);
+  spendByProviderEl.textContent = lines.length ? lines.join(" · ") : "No usage recorded yet.";
+}
+
+const PROVIDER_LABEL_NAMES = {
+  openai: "OpenAI",
+  anthropic: "Anthropic",
+  kimi: "Kimi",
+  gemini: "Gemini",
+};
+
+resetSpendBtn.addEventListener("click", async () => {
+  const usage = { totalSpentUSD: 0, byProvider: {} };
+  await chrome.storage.local.set({ usage });
+  renderSpend(usage);
 });
 
 // ---- CV ----
@@ -426,6 +467,67 @@ aboutMeFileInput.addEventListener("change", async () => {
   }
 });
 
+// ---- Addresses ----
+
+function renderAddressList(addresses) {
+  addressListEl.innerHTML = "";
+  if (!addresses.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No addresses saved yet.";
+    addressListEl.appendChild(empty);
+    return;
+  }
+
+  for (const a of addresses.slice().reverse()) {
+    const item = document.createElement("div");
+    item.className = "resourceItem";
+
+    const meta = document.createElement("div");
+    meta.className = "resourceMeta";
+    const label = document.createElement("div");
+    label.className = "resourceLabel";
+    label.textContent = a.label || "Address";
+    makeCopyable(label, a.label || "");
+    const preview = document.createElement("div");
+    preview.className = "resourcePreview";
+    preview.textContent = a.content || "";
+    makeCopyable(preview, a.content || "");
+    meta.appendChild(label);
+    meta.appendChild(preview);
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "secondary";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", async () => {
+      const { addresses: current = [] } = await chrome.storage.local.get("addresses");
+      const next = current.filter((x) => x.id !== a.id);
+      await chrome.storage.local.set({ addresses: next });
+      renderAddressList(next);
+    });
+
+    item.appendChild(meta);
+    item.appendChild(removeBtn);
+    addressListEl.appendChild(item);
+  }
+}
+
+addAddressBtn.addEventListener("click", async () => {
+  const content = addressContentArea.value.trim();
+  if (!content) {
+    flash(addressStatus, "Write an address first.", true);
+    return;
+  }
+  const label = addressLabelInput.value.trim();
+  const { addresses = [] } = await chrome.storage.local.get("addresses");
+  addresses.push({ id: crypto.randomUUID(), label: label || "Address", content, addedAt: Date.now() });
+  await chrome.storage.local.set({ addresses });
+  renderAddressList(addresses);
+  addressLabelInput.value = "";
+  addressContentArea.value = "";
+  flash(addressStatus, "Address added.");
+});
+
 // ---- Resources ----
 
 function htmlToText(html) {
@@ -548,21 +650,52 @@ function textToDataUrl(text, mimeType) {
   return `data:${mimeType};base64,${btoa(binary)}`;
 }
 
+const BACKUP_KEYS = [
+  "providers",
+  "activeProvider",
+  "cvData",
+  "cvStyle",
+  "coverLetterText",
+  "aboutMeNotes",
+  "resources",
+  "addresses",
+  "usage",
+];
+
 exportBackupBtn.addEventListener("click", async () => {
   try {
     flash(backupStatusEl, "Exporting...");
-    const data = await chrome.storage.local.get([
-      "cvData",
-      "coverLetterText",
-      "aboutMeNotes",
-      "resources",
-      "cvStyle",
-    ]);
+    const data = await chrome.storage.local.get(BACKUP_KEYS);
     const bundle = { exportedAt: new Date().toISOString(), ...data };
     const url = textToDataUrl(JSON.stringify(bundle, null, 2), "application/json");
     await chrome.downloads.download({ url, filename: "cv-autofill-backup.json", saveAs: true });
     flash(backupStatusEl, "Exported.");
   } catch (err) {
     flash(backupStatusEl, err.message, true);
+  }
+});
+
+importBackupInput.addEventListener("change", async () => {
+  const file = importBackupInput.files[0];
+  if (!file) return;
+  try {
+    flash(backupStatusEl, "Reading backup file...");
+    const text = await fileToText(file);
+    const bundle = JSON.parse(text);
+    const { exportedAt, ...data } = bundle;
+    const toRestore = {};
+    for (const key of BACKUP_KEYS) {
+      if (key in data) toRestore[key] = data[key];
+    }
+    if (!Object.keys(toRestore).length) {
+      throw new Error("That file doesn't look like a backup from this extension.");
+    }
+    await chrome.storage.local.set(toRestore);
+    flash(backupStatusEl, "Restored — reloading...");
+    setTimeout(() => location.reload(), 600);
+  } catch (err) {
+    flash(backupStatusEl, `Import failed: ${err.message}`, true);
+  } finally {
+    importBackupInput.value = "";
   }
 });

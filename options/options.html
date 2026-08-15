@@ -8,22 +8,48 @@
   <body>
     <h1>Farhad's CV AutoFill — Options</h1>
 
+    <section id="spendSection">
+      <h2>Estimated spend</h2>
+      <p class="muted">
+        A running total across all four providers below, estimated from each
+        model's published price per token. This is not a real invoice — check
+        your provider's own billing dashboard for what you're actually
+        charged.
+      </p>
+      <div class="row" style="align-items: baseline">
+        <span id="totalSpent" style="font-size: 1.4em; font-weight: 600">$0.0000</span>
+        <button id="resetSpendBtn" class="secondary">Reset counter</button>
+      </div>
+      <div id="spendByProvider" class="muted" style="margin-top: 6px"></div>
+    </section>
+
+    <hr />
+
     <section>
       <h2>AI provider</h2>
       <p class="muted">
-        Neither OpenAI nor Anthropic offer a public "log in with your account" flow
-        for third-party extensions like this one — the ChatGPT/Claude.ai subscription
-        login is separate from their developer APIs. An API key (billed per call,
-        separate from any Plus/Pro subscription) is the supported way to connect.
+        None of these offer a public "log in with your account" flow for
+        third-party extensions like this one — their consumer chat subscriptions
+        are separate from their developer APIs. An API key (billed per call) is
+        the supported way to connect. Add a key for as many providers as you
+        want below — they're all kept ready to use — then pick which one is
+        active right now.
       </p>
-      <select id="provider">
+      <label class="muted" for="activeProvider" style="display: block; margin-bottom: 4px">Currently using</label>
+      <select id="activeProvider">
         <option value="openai">OpenAI</option>
         <option value="anthropic">Anthropic (Claude)</option>
+        <option value="kimi">Kimi (Moonshot)</option>
+        <option value="gemini">Gemini (Google)</option>
       </select>
+      <p class="muted" style="margin-top: 6px">
+        Kimi doesn't support reading uploaded PDF files directly — for CV/cover
+        letter/document PDF uploads, switch to OpenAI, Anthropic, or Gemini first.
+      </p>
     </section>
 
-    <section id="openaiSection">
-      <h2>OpenAI API key</h2>
+    <details open>
+      <summary>OpenAI API key</summary>
       <p class="muted">
         Stored only in this browser's local extension storage — never sent anywhere
         except directly to <code>api.openai.com</code>. Get one at
@@ -37,10 +63,10 @@
         <option value="gpt-4.1-mini">gpt-4.1-mini</option>
         <option value="gpt-4.1">gpt-4.1</option>
       </select>
-    </section>
+    </details>
 
-    <section id="anthropicSection">
-      <h2>Anthropic (Claude) API key</h2>
+    <details>
+      <summary>Anthropic (Claude) API key</summary>
       <p class="muted">
         Stored only in this browser's local extension storage — never sent anywhere
         except directly to <code>api.anthropic.com</code>. Get one at
@@ -53,9 +79,41 @@
         <option value="claude-opus-5">claude-opus-5 (most capable)</option>
         <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (fastest/cheapest)</option>
       </select>
-    </section>
+    </details>
 
-    <div class="row">
+    <details>
+      <summary>Kimi (Moonshot) API key</summary>
+      <p class="muted">
+        Stored only in this browser's local extension storage — never sent anywhere
+        except directly to <code>api.moonshot.ai</code>. Get one at
+        <a href="https://platform.moonshot.ai/console/api-keys" target="_blank" rel="noopener">platform.moonshot.ai/console/api-keys</a>.
+        (If your account is on Moonshot's mainland-China platform instead, its
+        keys are issued for <code>api.moonshot.cn</code> and won't work here.)
+      </p>
+      <input type="password" id="kimiApiKey" placeholder="sk-..." autocomplete="off" />
+      <label class="checkboxRow"><input type="checkbox" id="showKimiKey" /> Show key</label>
+      <select id="kimiModel">
+        <option value="kimi-k2.5">kimi-k2.5 (default, cheapest)</option>
+        <option value="kimi-k3">kimi-k3 (most capable)</option>
+      </select>
+    </details>
+
+    <details>
+      <summary>Gemini (Google) API key</summary>
+      <p class="muted">
+        Stored only in this browser's local extension storage — never sent anywhere
+        except directly to <code>generativelanguage.googleapis.com</code>. Get one at
+        <a href="https://aistudio.google.com/apikey" target="_blank" rel="noopener">aistudio.google.com/apikey</a>.
+      </p>
+      <input type="password" id="geminiApiKey" placeholder="AIza..." autocomplete="off" />
+      <label class="checkboxRow"><input type="checkbox" id="showGeminiKey" /> Show key</label>
+      <select id="geminiModel">
+        <option value="gemini-3.5-flash">gemini-3.5-flash (default, fastest/cheapest)</option>
+        <option value="gemini-3.1-pro">gemini-3.1-pro (most capable)</option>
+      </select>
+    </details>
+
+    <div class="row" style="margin-top: 12px">
       <button id="save">Save</button>
       <span id="saveStatus" class="muted"></span>
     </div>
@@ -168,6 +226,25 @@
     <hr />
 
     <section>
+      <h2>Addresses</h2>
+      <p class="muted">
+        Labeled physical addresses — home, mailing, previous employer, whatever
+        applies. Used to fill address-shaped fields (street, city, postal code,
+        country) during autofill and Ask AI.
+      </p>
+      <input type="text" id="addressLabel" placeholder="Title — e.g. Home" />
+      <textarea id="addressContent" rows="3" placeholder="Street, city, state/province, postal code, country"></textarea>
+      <div class="row">
+        <button id="addAddressBtn">Add address</button>
+      </div>
+      <div id="addressStatus" class="muted" style="margin-top: 8px"></div>
+      <p class="muted" style="margin-top: 14px">Saved addresses</p>
+      <div id="addressList" class="resourceList"></div>
+    </section>
+
+    <hr />
+
+    <section>
       <h2>Resources</h2>
       <p class="muted">
         Add links to your own websites (portfolio, GitHub, personal site) — their text
@@ -186,15 +263,22 @@
     <hr />
 
     <section id="backupSection">
-      <h2>Export backup</h2>
+      <h2>Backup</h2>
       <p class="muted">
-        Downloads a single JSON file with your CV, cover letter, notes, resources, and
-        CV style — purely a backup/inspection copy. The extension always keeps working
-        from its normal internal storage; this doesn't replace that, and importing it
-        back isn't supported yet — it's for your own records.
+        Export downloads a single JSON file with everything: CV, cover letter,
+        notes, addresses, resources, CV style, and your API keys for all four
+        providers — enough to fully restore this extension after a reinstall or
+        on a new browser via Import. <strong>This file contains your API keys in
+        plain text — keep it somewhere private (not a public folder, not a
+        GitHub repo, not shared with anyone) and never commit it anywhere.</strong>
+        To "update" a backup, just export again over the same file.
       </p>
       <div class="row">
         <button id="exportBackupBtn" class="secondary">Export backup</button>
+        <label class="fileBtn">
+          Import backup
+          <input type="file" id="importBackupInput" accept=".json,application/json" hidden />
+        </label>
         <span id="backupStatus" class="muted"></span>
       </div>
     </section>

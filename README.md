@@ -18,12 +18,13 @@ toolbar sizes. Source SVGs and design iterations are in `icon-design/` —
 
 1. **Upload your CV and (optionally) a past cover letter** from the
    extension's **Options** page — PDF, Word (.docx), or pasted text, for
-   each. The CV is sent to your chosen AI provider (OpenAI or
-   Anthropic/Claude) and parsed into structured JSON (name, contact info,
-   work history, education, skills); the cover letter is saved as reference
-   text (only PDFs need an AI call to extract their text — .docx and pasted
-   text are handled locally, no API call). Both are saved in the browser's
-   local extension storage — nothing is uploaded anywhere else.
+   each. The CV is sent to your active AI provider (OpenAI, Anthropic/Claude,
+   Kimi/Moonshot, or Gemini/Google — see below) and parsed into structured
+   JSON (name, contact info, work history, education, skills); the cover
+   letter is saved as reference text (only PDFs need an AI call to extract
+   their text — .docx and pasted text are handled locally, no API call).
+   Both are saved in the browser's local extension storage — nothing is
+   uploaded anywhere else.
 2. On any job application page, click **Autofill this page**. The extension
    scans visible text/textarea/select fields, sends their labels (plus your
    CV data) to the same provider, and asks it to propose values.
@@ -53,10 +54,12 @@ toolbar sizes. Source SVGs and design iterations are in `icon-design/` —
    availability, preferences, anything not in your CV — or upload a PDF,
    Word (.docx), or .txt file (a diploma, certificate, reference letter) and
    its text is extracted and saved as a labeled note the same way. **Options
-   → Resources**: add links to your own websites (portfolio, GitHub, personal
-   site) — their text is fetched once (you approve access per-site) and saved
-   as extra context. All of this feeds into autofill, cover letters, tailored
-   CVs, and Ask AI answers.
+   → Addresses**: add labeled physical addresses (home, mailing, whatever
+   applies) used to fill address-shaped form fields. **Options → Resources**:
+   add links to your own websites (portfolio, GitHub, personal site) — their
+   text is fetched once (you approve access per-site) and saved as extra
+   context. All of this feeds into autofill, cover letters, tailored CVs, and
+   Ask AI answers.
 
 ### What it deliberately won't touch
 
@@ -76,28 +79,54 @@ toolbar sizes. Source SVGs and design iterations are in `icon-design/` —
 
 ## Setup
 
-Choose OpenAI or Anthropic (Claude) as your provider in **Options**, then
-paste in an API key for that provider:
+**Options → AI provider** lets you add a key for as many of the four
+supported providers as you want — they're all kept ready to use — then pick
+which one is **active** with the "Currently using" dropdown. Switch anytime
+without re-entering anything.
 
 - OpenAI: https://platform.openai.com/api-keys (`gpt-4o-mini` is the default model)
 - Anthropic: https://console.anthropic.com/settings/keys (`claude-sonnet-5` is the default model)
+- Kimi (Moonshot): https://platform.moonshot.ai/console/api-keys (`kimi-k2.5` is the default model)
+- Gemini (Google): https://aistudio.google.com/apikey (`gemini-3.5-flash` is the default model)
 
-Note this needs a real API key from the provider's developer console, billed
-per call — neither OpenAI nor Anthropic offer a public "log in with your
-ChatGPT/Claude.ai account" flow for third-party extensions like this one, so
-there's no way to reuse a ChatGPT Plus or Claude Pro subscription here.
+Each needs a real API key from that provider's own developer console, billed
+per call — none of them offer a public "log in with your consumer chat
+account" flow for third-party extensions like this one, so there's no way to
+reuse a ChatGPT Plus / Claude Pro / Gemini Advanced subscription here.
 
-### Export backup
+**Kimi doesn't support reading uploaded PDF files** (its API only documents
+a separate file-upload endpoint, not inline PDFs in a chat message) — CV,
+cover letter, and About-Me PDF uploads need OpenAI, Anthropic, or Gemini
+active instead. Everything else (autofill, cover letter writing, CV
+tailoring, Ask AI) works with any of the four.
 
-Options has an **Export backup** button — downloads a single JSON snapshot
-of your CV, cover letter, About Me notes, resources, and CV style, purely
-for your own inspection/backup. (An earlier version of this tried to let
-you pick a folder to auto-mirror into on every save, using the File System
-Access API — that's confirmed broken specifically inside browser extension
-pages regardless of any permission grant, [not just on this Mac](https://issues.chromium.org/issues/40240444),
-so it's gone in favor of this simpler, actually-working export.) The
-extension always reads from its own internal storage either way — this is
-just a copy, never the source of truth.
+### Estimated spend
+
+The top of Options shows a running total, estimated from each model's
+published price per token and updated after every AI call. This is a
+best-effort estimate for your own awareness, not a real invoice — check
+each provider's own billing dashboard for what you're actually charged.
+"Reset counter" zeroes it out (e.g. after checking your real bill).
+
+### Backup
+
+Options → Backup has **Export backup** and **Import backup**. Export
+downloads a single JSON file with everything: CV, cover letter, About Me
+notes, addresses, resources, CV style, and your saved API keys for all four
+providers — enough to fully restore the extension after a reinstall or on a
+new browser via Import. **This file contains your API keys in plain text —
+keep it somewhere private and never commit it to a Git repo or share it.**
+To "update" a backup, just export again over the same file/location.
+
+(An earlier version of this tried to let you pick a folder to auto-mirror
+into on every save, using the File System Access API — that's confirmed
+broken specifically inside browser extension pages regardless of any
+permission grant, [not just on this Mac](https://issues.chromium.org/issues/40240444).
+It's also Chromium-only, so it wouldn't have worked in Firefox/Safari either.
+Plain Export/Import via the browser's normal file dialogs works reliably
+everywhere this extension runs, so that's what's here instead.) The
+extension always reads from its own internal storage either way — a backup
+file is just a snapshot, never the source of truth.
 
 ## Load it in Firefox (development / personal use)
 
@@ -146,13 +175,14 @@ point it at this folder. See [INSTALL.txt](INSTALL.txt) for more detail.
 
 ```
 manifest.json           Manifest V3 config
-background.js           Service worker — calls OpenAI Responses API or Anthropic Messages API
+background.js           Service worker — calls OpenAI/Anthropic/Kimi/Gemini APIs, tracks estimated spend
 shared/blocklist.js     Sensitive-field keyword filter, shared by background + popup
 lib/docx.js             Standalone .docx → plain text/style extractor (no external library)
 lib/pdf-writer.js       Standalone plain text → PDF writer (no external library)
 lib/docx-writer.js      Standalone plain data → .docx writer, with optional photo/color (no external library)
 popup/                  Toolbar popup UI — autofill, cover letter, tailored CV, add info, ask AI
-options/                Provider/API key/model settings, CV/cover letter upload, resources, export backup
+options/                Provider/API key/model settings, spend estimate, CV/cover letter upload,
+                        about me, addresses, resources, export/import backup
 windows/                Small popup windows opened from the toolbar popup ("Add info", "Ask AI directly")
 ```
 
