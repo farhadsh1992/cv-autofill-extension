@@ -52,6 +52,20 @@ header {
   margin-bottom: 8px;
 }
 
+.titleRow {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.popupLogo {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  flex-shrink: 0;
+}
+
 h1 {
   font-size: 15px;
   margin: 0;
