@@ -17,6 +17,36 @@ const taskProviderSelects = {
   tailorCv: document.getElementById("taskProviderTailorCv"),
   coverLetter: document.getElementById("taskProviderCoverLetter"),
 };
+const taskModelSelects = {
+  autofill: document.getElementById("taskModelAutofill"),
+  tailorCv: document.getElementById("taskModelTailorCv"),
+  coverLetter: document.getElementById("taskModelCoverLetter"),
+};
+
+// Fills a task's model <select> with MODEL_CATALOG's options for whichever
+// provider that task is currently pointed at ("" = Active provider, which
+// has no specific model of its own to override — the select stays empty and
+// disabled in that case, so Save doesn't write a stale model value).
+function populateTaskModelSelect(task, selectedModel) {
+  const provider = taskProviderSelects[task].value;
+  const modelSelect = taskModelSelects[task];
+  modelSelect.innerHTML = "";
+  if (!provider) {
+    modelSelect.disabled = true;
+    return;
+  }
+  modelSelect.disabled = false;
+  const models = MODEL_CATALOG[provider] || [];
+  for (const { value, label } of models) {
+    const opt = document.createElement("option");
+    opt.value = value;
+    opt.textContent = label;
+    modelSelect.appendChild(opt);
+  }
+  if (selectedModel && models.some((m) => m.value === selectedModel)) {
+    modelSelect.value = selectedModel;
+  }
+}
 
 const PROVIDER_FIELD_IDS = {
   openai: { apiKey: "openaiApiKey", showKey: "showOpenaiKey", model: "openaiModel" },
@@ -35,6 +65,15 @@ for (const [id, fieldIds] of Object.entries(PROVIDER_FIELD_IDS)) {
 
 const saveBtn = document.getElementById("save");
 const saveStatus = document.getElementById("saveStatus");
+
+// Terminal providers — no API key, so kept out of PROVIDER_FIELD_IDS/providerFields above.
+const NATIVE_HOST_NAME = "com.farhadshad.cvautofill.clibridge";
+const claudeCodeModelSelect = document.getElementById("claudeCodeModel");
+const openaiCodeModelSelect = document.getElementById("openaiCodeModel");
+const checkClaudeCodeBridgeBtn = document.getElementById("checkClaudeCodeBridgeBtn");
+const claudeCodeBridgeStatusEl = document.getElementById("claudeCodeBridgeStatus");
+const checkCodexBridgeBtn = document.getElementById("checkCodexBridgeBtn");
+const codexBridgeStatusEl = document.getElementById("codexBridgeStatus");
 
 const totalSpentEl = document.getElementById("totalSpent");
 const spendByProviderEl = document.getElementById("spendByProvider");
@@ -92,6 +131,8 @@ const exportJobsBtn = document.getElementById("exportJobsBtn");
 const jobsExportStatus = document.getElementById("jobsExportStatus");
 const jobsTableWrapEl = document.getElementById("jobsTableWrap");
 
+const promptSections = document.querySelectorAll(".promptSection");
+
 // ---- Tabs ----
 
 for (const btn of tabBtns) {
@@ -108,6 +149,7 @@ async function init() {
     "providers",
     "activeProvider",
     "taskProviders",
+    "taskModels",
     "theme",
     "accentColor",
     "saveJobColor",
@@ -121,6 +163,7 @@ async function init() {
     "usage",
     "savedJobs",
     "jobsFileName",
+    "promptOverrides",
     // legacy single/dual-provider keys from before multi-provider support
     "provider",
     "openaiApiKey",
@@ -137,8 +180,10 @@ async function init() {
   saveJobColorInput.value = stored.saveJobColor || DEFAULT_SAVE_JOB_COLOR;
 
   const taskProviders = stored.taskProviders || {};
+  const taskModels = stored.taskModels || {};
   for (const [task, select] of Object.entries(taskProviderSelects)) {
     select.value = taskProviders[task] || "";
+    populateTaskModelSelect(task, taskModels[task]);
   }
   taskProviderSaveJobSelect.value = taskProviders.saveJob || "";
   jobsFileNameInput.value = stored.jobsFileName || "applied jobs";
@@ -166,6 +211,8 @@ async function init() {
     fields.apiKeyInput.value = cfg.apiKey || "";
     if (cfg.model) fields.modelSelect.value = cfg.model;
   }
+  claudeCodeModelSelect.value = (providers.claudeCode || {}).model || "default";
+  openaiCodeModelSelect.value = (providers.openaiCode || {}).model || "default";
 
   if (stored.cvData) cvJsonArea.value = JSON.stringify(stored.cvData, null, 2);
   if (stored.cvStyle) renderCvStyle(stored.cvStyle);
@@ -183,12 +230,17 @@ async function init() {
   renderResourceList(stored.resources || []);
   renderAddressList(stored.addresses || []);
   renderSpend(stored.usage || { totalSpentUSD: 0, byProvider: {} });
+  renderPrompts(stored.promptOverrides || {});
 }
 
 for (const fields of Object.values(providerFields)) {
   fields.showKeyBox.addEventListener("change", () => {
     fields.apiKeyInput.type = fields.showKeyBox.checked ? "text" : "password";
   });
+}
+
+for (const [task, select] of Object.entries(taskProviderSelects)) {
+  select.addEventListener("change", () => populateTaskModelSelect(task));
 }
 
 // ---- Appearance ----
@@ -231,16 +283,21 @@ saveBtn.addEventListener("click", async () => {
     }
     providers[id] = { apiKey, model: fields.modelSelect.value };
   }
+  providers.claudeCode = { model: claudeCodeModelSelect.value };
+  providers.openaiCode = { model: openaiCodeModelSelect.value };
 
   // Merge onto whatever's already stored (rather than replacing wholesale) so
   // this doesn't clobber the Jobs tab's own taskProviders.saveJob setting.
-  const { taskProviders: existingTaskProviders = {} } = await chrome.storage.local.get("taskProviders");
+  const { taskProviders: existingTaskProviders = {}, taskModels: existingTaskModels = {} } =
+    await chrome.storage.local.get(["taskProviders", "taskModels"]);
   const taskProviders = { ...existingTaskProviders };
+  const taskModels = { ...existingTaskModels };
   for (const [task, select] of Object.entries(taskProviderSelects)) {
     taskProviders[task] = select.value;
+    taskModels[task] = select.value ? taskModelSelects[task].value : "";
   }
 
-  await chrome.storage.local.set({ providers, activeProvider: activeProviderSelect.value, taskProviders });
+  await chrome.storage.local.set({ providers, activeProvider: activeProviderSelect.value, taskProviders, taskModels });
   flash(saveStatus, "Saved.");
 });
 
@@ -742,6 +799,7 @@ const BACKUP_KEYS = [
   "providers",
   "activeProvider",
   "taskProviders",
+  "taskModels",
   "theme",
   "accentColor",
   "saveJobColor",
@@ -754,6 +812,7 @@ const BACKUP_KEYS = [
   "usage",
   "savedJobs",
   "jobsFileName",
+  "promptOverrides",
 ];
 
 exportBackupBtn.addEventListener("click", async () => {
@@ -927,3 +986,81 @@ exportJobsBtn.addEventListener("click", async () => {
     flash(jobsExportStatus, err.message, true);
   }
 });
+
+// ---- Prompts ----
+
+function renderPrompts(overrides) {
+  for (const section of promptSections) {
+    const key = section.dataset.promptKey;
+    const textarea = section.querySelector(".promptTextarea");
+    textarea.value = overrides[key] || DEFAULT_PROMPTS[key];
+  }
+}
+
+for (const section of promptSections) {
+  const key = section.dataset.promptKey;
+  const textarea = section.querySelector(".promptTextarea");
+  const promptSaveBtn = section.querySelector(".promptSaveBtn");
+  const promptResetBtn = section.querySelector(".promptResetBtn");
+  const promptStatus = section.querySelector(".promptStatus");
+
+  promptSaveBtn.addEventListener("click", async () => {
+    const { promptOverrides = {} } = await chrome.storage.local.get("promptOverrides");
+    const text = textarea.value.trim();
+    if (!text || text === DEFAULT_PROMPTS[key]) {
+      delete promptOverrides[key];
+    } else {
+      promptOverrides[key] = text;
+    }
+    await chrome.storage.local.set({ promptOverrides });
+    textarea.value = promptOverrides[key] || DEFAULT_PROMPTS[key];
+    flash(promptStatus, "Saved.");
+  });
+
+  promptResetBtn.addEventListener("click", async () => {
+    const { promptOverrides = {} } = await chrome.storage.local.get("promptOverrides");
+    delete promptOverrides[key];
+    await chrome.storage.local.set({ promptOverrides });
+    textarea.value = DEFAULT_PROMPTS[key];
+    flash(promptStatus, "Reset to default.");
+  });
+}
+
+// ---- Terminal providers (native messaging bridge) ----
+
+function checkBridge(statusEl) {
+  statusEl.textContent = "Checking...";
+  statusEl.style.color = "";
+  // The exact request content doesn't matter here — any response at all
+  // (even an "unknown cli" error) proves the native host process launched,
+  // read our message, and replied. Only chrome.runtime.lastError means the
+  // bridge isn't registered/reachable.
+  chrome.runtime.sendNativeMessage(NATIVE_HOST_NAME, { cli: "ping", model: "default", prompt: "ping" }, () => {
+    if (chrome.runtime.lastError) {
+      statusEl.textContent = 'Not found — see "Set up" below.';
+      statusEl.style.color = "var(--danger)";
+      return;
+    }
+    statusEl.textContent = "Bridge found.";
+    statusEl.style.color = "var(--success)";
+  });
+}
+
+checkClaudeCodeBridgeBtn.addEventListener("click", () => checkBridge(claudeCodeBridgeStatusEl));
+checkCodexBridgeBtn.addEventListener("click", () => checkBridge(codexBridgeStatusEl));
+
+for (const btn of document.querySelectorAll(".copyCmdBtn")) {
+  btn.addEventListener("click", async () => {
+    const text = btn.dataset.copy || "";
+    const original = btn.textContent;
+    try {
+      await navigator.clipboard.writeText(text);
+      btn.textContent = "Copied";
+    } catch {
+      btn.textContent = "Copy failed";
+    }
+    setTimeout(() => {
+      btn.textContent = original;
+    }, 1500);
+  });
+}

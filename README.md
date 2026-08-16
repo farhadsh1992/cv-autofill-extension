@@ -92,31 +92,89 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
 
 ## Options page layout
 
-The Options page is split into four tabs: **Appearance**, **AI**, **Info**,
-and **Jobs**.
+The Options page is split into five tabs: **Appearance**, **AI**, **Info**,
+**Jobs**, and **Prompts**.
 
 - **Appearance** — Theme (System/Light/Dark, overriding your OS everywhere
   in the extension — popup, options, and the small windows) and Button color
   (a color picker for the accent color used on buttons and links). Both
   apply instantly and save automatically, no Save button needed.
-- **AI** — everything about providers: the estimated spend counter, the four
-  providers' API keys/models, which one is active, and **Model per action**
-  — optionally send autofill, CV rebuilding, and cover letter rebuilding to
-  different providers instead of all sharing the one "active" choice (e.g.
-  a cheap model for autofill, a stronger one for rewriting your CV). Each
-  defaults to "Active provider" until set otherwise.
+- **AI** — leads with **Model per action**: optionally send autofill, CV
+  rebuilding, and cover letter rebuilding to a different provider *and* a
+  different model of that provider, instead of all sharing the one "active"
+  choice below (e.g. a cheap model for autofill, a stronger one for
+  rewriting your CV). Each task defaults to "Active provider" until set
+  otherwise — picking a specific provider there reveals a model dropdown for
+  it. Below that: the estimated spend counter, and the six providers' API
+  keys/models plus which one is "active" (the default every task without its
+  own override uses).
 - **Info** — your CV, cover letter, About Me notes, addresses, resources,
   and backup export/import. Everything the AI draws on as context.
 - **Jobs** — which model extracts job details for "Save this job", the
   export file name, and the live table of every job you've saved (edit
   Results, remove rows, re-export any time).
+- **Prompts** — the exact instructions sent to the AI for each of the eight
+  tasks this extension performs (Parse CV, Autofill this page, Extract cover
+  letter text, Extract document text, Generate cover letter, Tailor CV, Ask
+  AI, Save this job), editable and saved per task. The built-in default text
+  for each lives in `shared/prompts.js` (`DEFAULT_PROMPTS`), shared with
+  `background.js`; edits are stored separately as overrides
+  (`chrome.storage.local.promptOverrides`), so leaving a box unchanged or
+  empty and saving just falls back to the default. Included in backup
+  export/import, same as everything else.
+
+## Terminal providers (Claude Code / Codex — no API key)
+
+Besides the four API-key providers, Options → AI also offers **Claude Code
+(Terminal)** and **OpenAI Codex (Terminal)** — these run through the
+`claude`/`codex` CLI already logged into this Mac's Terminal (your Pro/Max or
+Plus/Pro/Team subscription), instead of a per-token API key.
+
+A browser extension can't spawn a process itself — no `child_process`, no
+shell access, nothing, in any browser, by design. What makes this work is
+[Chrome/Firefox Native Messaging](https://developer.chrome.com/docs/apps/nativeMessaging):
+a small, separately-registered bridge that lets the extension launch a
+native program and exchange JSON messages with it over stdin/stdout. Rather
+than a standalone helper binary, the "native program" here is the sibling
+[Mac app](https://github.com/farhadsh1992/cv-autofill-mac-app)'s own
+executable — the browser launches it in a headless mode it detects itself
+(see `NativeMessagingHost.swift` / `CVAutoFillApp.swift` in that repo), which
+reuses the exact same Claude Code / Codex integration the Mac app's own GUI
+uses, no duplicate logic to maintain. Each request is a fresh, separate
+launch of that binary — it doesn't reach into an already-open GUI window if
+you happen to have one open, and there's no live-terminal view here the way
+the Mac app has (native messaging is one request, one response — for
+watching a call happen live, use the Mac app itself).
+
+**Chrome and Firefox only.** Safari and Orion don't support this native
+messaging mechanism — a Safari/Orion extension talking to a helper app needs
+a completely different architecture (bundled app + XPC), which isn't built
+here.
+
+**One-time setup, from Terminal** (the extension can't run this for you —
+that's the whole reason a bridge is needed in the first place):
+
+```bash
+cd native-host
+bash install.sh
+```
+
+It finds the Mac app (checks `/Applications` and the sibling
+`cv_autofill_mac_app/dist/` build, or asks for the path), then asks for this
+extension's ID from each browser (`chrome://extensions` with Developer mode
+on; `about:debugging#/runtime/this-firefox` for Firefox) and writes the
+native messaging host manifest(s) that point at it. Re-run it if you move or
+rebuild the Mac app afterward — the manifest has an absolute path baked in.
+Options → AI → Claude Code/OpenAI Codex has a "Check bridge" button to
+confirm it's wired up.
 
 ## Setup
 
 **Options → AI provider** lets you add a key for as many of the four
-supported providers as you want — they're all kept ready to use — then pick
-which one is **active** with the "Currently using" dropdown. Switch anytime
-without re-entering anything.
+API-key providers as you want — they're all kept ready to use — then pick
+which one is **active** with the "Currently using" dropdown (this dropdown
+also includes the two terminal providers described above, once their bridge
+is set up). Switch anytime without re-entering anything.
 
 - OpenAI: https://platform.openai.com/api-keys (`gpt-4o-mini` is the default model)
 - Anthropic: https://console.anthropic.com/settings/keys (`claude-sonnet-5` is the default model)
@@ -238,14 +296,19 @@ manifest.json           Manifest V3 config
 background.js           Service worker — calls OpenAI/Anthropic/Kimi/Gemini APIs, tracks estimated spend
 shared/blocklist.js     Sensitive-field keyword filter, shared by background + popup
 shared/theme.js         Applies manual theme/accent-color overrides on every page
+shared/prompts.js       Default per-task AI instruction text (DEFAULT_PROMPTS), shared by
+                        background.js and options.js's Prompts tab
+native-host/install.sh  One-time setup for the Claude Code/Codex terminal providers — registers
+                        the sibling Mac app as a Chrome/Firefox native messaging host
 lib/docx.js             Standalone .docx → plain text/style extractor (no external library)
 lib/pdf-writer.js       Standalone plain text → PDF writer (no external library)
 lib/docx-writer.js      Standalone plain data → .docx writer (CV template + optional photo/color,
                         plus a plain bordered-table doc used for the applied-jobs export)
 popup/                  Toolbar popup UI — autofill, cover letter, tailored CV, add info, ask AI
-options/                Appearance/AI/Info tabs — theme & color, provider keys & per-action model
-                        routing & spend estimate, CV/cover letter upload, about me, addresses,
-                        resources, export/import backup
+options/                Appearance/AI/Info/Jobs/Prompts tabs — theme & color, provider keys &
+                        per-action model routing & spend estimate, CV/cover letter upload,
+                        about me, addresses, resources, export/import backup, applied jobs,
+                        per-task prompt editor
 windows/                Small popup windows opened from the toolbar popup ("Add info", "Ask AI directly")
 ```
 

@@ -1,4 +1,4 @@
-importScripts("shared/blocklist.js", "lib/docx-writer.js");
+importScripts("shared/blocklist.js", "shared/prompts.js", "shared/models.js", "lib/docx-writer.js");
 
 const OPENAI_URL = "https://api.openai.com/v1/responses";
 const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
@@ -11,6 +11,8 @@ const DEFAULT_MODELS = {
   anthropic: "claude-sonnet-5",
   kimi: "kimi-k2.5",
   gemini: "gemini-3.5-flash",
+  claudeCode: "default",
+  openaiCode: "default",
 };
 
 const PROVIDER_LABELS = {
@@ -18,12 +20,23 @@ const PROVIDER_LABELS = {
   anthropic: "Anthropic (Claude)",
   kimi: "Kimi (Moonshot)",
   gemini: "Gemini (Google)",
+  claudeCode: "Claude Code (Terminal)",
+  openaiCode: "OpenAI Codex (Terminal)",
 };
 
 // Kimi's chat completions API doesn't document inline base64 PDF/image
 // content parts (only a separate upload-a-file-first Files API) — so PDF
-// extraction is restricted to the providers that do support it.
+// extraction is restricted to the providers that do support it. The two
+// terminal providers don't support it either — the CLIs' headless mode here
+// is plain text-in/text-out, no document upload.
 const DOCUMENT_CAPABLE_PROVIDERS = ["openai", "anthropic", "gemini"];
+
+// Native messaging host name — registered by native-host/install.sh,
+// pointing at the sibling Mac app's own executable (it detects this launch
+// mode itself; see NativeMessagingHost.swift in that repo). Chrome/Firefox
+// only — Safari and Orion don't support native messaging this way.
+const NATIVE_HOST_NAME = "com.farhadshad.cvautofill.clibridge";
+const NATIVE_BRIDGE_PROVIDERS = { claudeCode: "claude", openaiCode: "codex" };
 
 // Published list prices, USD per 1,000,000 tokens. These are estimates for
 // a running spend counter, not a real invoice — actual billing may differ
@@ -50,96 +63,25 @@ const PRICING = {
   },
 };
 
-const CV_SCHEMA_PROMPT = `Extract the candidate's information from the attached CV/resume into a JSON object with exactly this shape:
-{
-  "full_name": "",
-  "email": "",
-  "phone": "",
-  "location": "",
-  "linkedin": "",
-  "github": "",
-  "portfolio": "",
-  "summary": "",
-  "work_experience": [{"title": "", "company": "", "start": "", "end": "", "description": ""}],
-  "education": [{"degree": "", "institution": "", "start": "", "end": ""}],
-  "skills": []
-}
-Only include information actually present in the CV. Use "" for missing string fields and [] for missing arrays.
-Do not invent employers, dates, or credentials that aren't in the document.
-Respond with JSON only — no markdown code fences, no commentary, no text before or after the JSON object.`;
-
-const FIELD_MAP_INSTRUCTIONS = `You are helping a job applicant fill out a web form using their CV data.
-You are given CV_DATA, ABOUT_ME (free-form notes from the applicant), ADDRESSES (labeled physical addresses — use the most fitting one for address-shaped fields like street/city/postal code/country), ADDITIONAL_RESOURCES (extra context from the applicant's own websites/notes), and a list of FORM_FIELDS (each with an "index", a "label", a "type", and for selects a list of "options").
-
-Return a JSON object of the shape: {"answers": [{"index": 0, "value": "..."}, ...]}
-
-Rules:
-- Only include a field in "answers" if you are genuinely confident about the value from CV_DATA/ABOUT_ME/ADDITIONAL_RESOURCES, or it's a short, honest answer that can be reasonably derived from them (e.g. a brief "why am I a good fit" using the summary/skills).
-- For select/dropdown fields, "value" must exactly match one of that field's provided "options" strings.
-- Never fabricate personal demographic information: gender, race, ethnicity, veteran status, disability status, or sexual orientation. Omit those fields entirely — leave them for the applicant.
-- Never fill salary expectations, government ID numbers, payment details, or passwords. Omit those fields entirely.
-- Skip any field you are not confident about rather than guessing. It is fine to leave many fields unanswered.
-- Keep free-text answers concise (2-4 sentences max) and grounded only in the given information. Do not invent facts.
-Respond with JSON only — no markdown code fences, no commentary, no text before or after the JSON object.`;
-
-const COVER_LETTER_EXTRACT_PROMPT = `Extract the full text of this cover letter as faithfully as possible, preserving paragraph breaks. Do not summarize or comment on it.
-Respond as JSON: {"text": "..."}. Respond with JSON only — no markdown code fences, no commentary.`;
-
-const DOCUMENT_EXTRACT_PROMPT = `Extract the full text of this document as faithfully as possible, preserving structure (headings, line breaks). It may be a diploma, certificate, letter, or any other personal document — do not summarize or comment on it, just transcribe what's there.
-Respond as JSON: {"text": "..."}. Respond with JSON only — no markdown code fences, no commentary.`;
-
-const COVER_LETTER_WRITE_PROMPT = `You are helping a job applicant write a new cover letter tailored to a specific job posting.
-You are given:
-- CV_DATA: the applicant's CV, as structured JSON.
-- REFERENCE_COVER_LETTER: a cover letter the applicant has written before. Use it only as a guide for their voice, tone, and typical structure — do not copy it verbatim, and do not reuse specifics (company names, roles) from it. Write a new letter tailored to JOB_CONTEXT.
-- JOB_CONTEXT: text scraped from the job posting page (title, company, description). It may be incomplete, noisy, or missing.
-
-Write a new cover letter grounded only in facts from CV_DATA — never invent employers, dates, skills, or achievements that aren't in CV_DATA. Keep it concise (250-400 words), professional, and specific to the role in JOB_CONTEXT where the context allows it. If JOB_CONTEXT is missing or unhelpful, write a solid general-purpose letter from CV_DATA instead of inventing job details.
-
-Respond as JSON: {"cover_letter": "..."}. Respond with JSON only — no markdown code fences, no commentary.`;
-
-const CV_TAILOR_PROMPT = `You are helping a job applicant tailor their CV/resume for a specific job posting.
-You are given CV_DATA (structured JSON), JOB_CONTEXT (text scraped from a job posting page — may be incomplete or missing), ABOUT_ME (free-form notes from the applicant), and ADDITIONAL_RESOURCES (extra context from the applicant's own websites/notes).
-
-Produce a tailored version of the CV as JSON with exactly this shape:
-{
-  "full_name": "",
-  "email": "",
-  "phone": "",
-  "location": "",
-  "linkedin": "",
-  "github": "",
-  "portfolio": "",
-  "summary": "",
-  "work_experience": [{"title": "", "company": "", "start": "", "end": "", "bullets": ["", "..."]}],
-  "education": [{"degree": "", "institution": "", "start": "", "end": ""}],
-  "skills": []
-}
-
-Rules:
-- Never invent employers, dates, titles, or achievements that aren't in CV_DATA, ABOUT_ME, or ADDITIONAL_RESOURCES. This is a rewrite/re-emphasis of real facts, not fiction.
-- You may reorder or trim skills, and rewrite the summary to speak directly to the role in JOB_CONTEXT.
-- Convert each role's experience into 2-4 concise, achievement-oriented "bullets" (rewrite any prose-style description into bullet points).
-- If JOB_CONTEXT is missing or unhelpful, produce a solid general-purpose tailored CV instead of inventing job specifics.
-
-Respond with JSON only — no markdown code fences, no commentary.`;
-
-const ASK_PROMPT = `You are helping a job applicant who is filling out a job application form and got stuck on a question the automatic form-filler couldn't confidently answer.
-You are given CV_DATA, ABOUT_ME, ADDRESSES, ADDITIONAL_RESOURCES, and the applicant's QUESTION.
-
-Answer the question directly and concisely, grounded only in the given information. If you don't have enough information to answer factually, say so plainly rather than guessing or inventing facts — the applicant will fill in the real answer themselves.
-
-Respond as JSON: {"answer": "..."}. Respond with JSON only — no markdown code fences, no commentary.`;
-
-const JOB_EXTRACT_PROMPT = `Extract details about the job posting described in this scraped page text.
-Respond as JSON with exactly this shape: {"title": "", "company": "", "location": "", "requirements": ""}.
-"requirements" should be a short 1-3 sentence summary of the key requirements/qualifications — not the full posting.
-Use "" for anything not found in the text. Do not invent details that aren't there.
-Respond with JSON only — no markdown code fences, no commentary.`;
+// Default instruction text for each task lives in shared/prompts.js
+// (DEFAULT_PROMPTS), loaded above via importScripts — shared with options.js
+// so the Prompts tab can show/edit the same text this file falls back to.
 
 // Caps keep prompts (and cost) bounded even if the applicant saves a lot of resources.
 const MAX_RESOURCES_IN_CONTEXT = 8;
 const MAX_RESOURCE_CHARS = 1500;
+
+// Per-task prompt overrides, edited in Options → Prompts. Falls back to
+// DEFAULT_PROMPTS (shared/prompts.js) when no override is stored for that key.
+async function getPromptOverrides() {
+  const { promptOverrides = {} } = await chrome.storage.local.get("promptOverrides");
+  return promptOverrides;
+}
+
+function resolvePrompt(overrides, key) {
+  const v = overrides[key];
+  return v && v.trim() ? v : DEFAULT_PROMPTS[key];
+}
 
 async function buildContextBlock() {
   const { resources = [], aboutMeNotes = [], addresses = [] } = await chrome.storage.local.get([
@@ -232,10 +174,18 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   }
 });
 
-async function getSettings(providerOverride) {
+async function getSettings(providerOverride, modelOverride) {
   const { providers = {}, activeProvider = "openai" } = await chrome.storage.local.get(["providers", "activeProvider"]);
   const provider = providerOverride || activeProvider;
   const cfg = providers[provider] || {};
+  const model = modelOverride || cfg.model || DEFAULT_MODELS[provider];
+
+  // Terminal providers authenticate via the Mac app's native bridge (your
+  // logged-in claude/codex CLI account), not a stored API key.
+  if (NATIVE_BRIDGE_PROVIDERS[provider]) {
+    return { provider, apiKey: null, model };
+  }
+
   const apiKey = cfg.apiKey;
   const providerName = PROVIDER_LABELS[provider] || provider;
   if (!apiKey) {
@@ -248,15 +198,17 @@ async function getSettings(providerOverride) {
       `The saved ${providerName} API key looks like a URL, not an API key (it contains "://"). Go to Options and re-paste the actual key from the provider's site.`
     );
   }
-  const model = cfg.model || DEFAULT_MODELS[provider];
   return { provider, apiKey, model };
 }
 
 // `parts` is a provider-agnostic content list: {type:"text", text} | {type:"pdf", base64}
 // `providerOverride` lets a specific action (autofill/tailor CV/cover letter) use a
 // provider other than the general "active" one, per its own Options setting.
-async function callAI(parts, providerOverride) {
-  const { provider, apiKey, model } = await getSettings(providerOverride);
+// `modelOverride` similarly lets that same action pick a specific model for
+// whichever provider it's using, instead of following that provider's own
+// single global model setting.
+async function callAI(parts, providerOverride, modelOverride) {
+  const { provider, apiKey, model } = await getSettings(providerOverride, modelOverride);
   const hasDocument = parts.some((p) => p.type === "pdf");
   if (hasDocument && !DOCUMENT_CAPABLE_PROVIDERS.includes(provider)) {
     throw new Error(
@@ -270,9 +222,57 @@ async function callAI(parts, providerOverride) {
       return callKimi(apiKey, model, parts);
     case "gemini":
       return callGemini(apiKey, model, parts);
+    case "openai":
+      return callOpenAI(apiKey, model, parts);
+    case "claudeCode":
+    case "openaiCode":
+      return callNativeBridge(provider, model, parts);
     default:
       return callOpenAI(apiKey, model, parts);
   }
+}
+
+function sendNativeMessage(hostName, message) {
+  return new Promise((resolve, reject) => {
+    chrome.runtime.sendNativeMessage(hostName, message, (response) => {
+      if (chrome.runtime.lastError) {
+        reject(new Error(chrome.runtime.lastError.message || "Native messaging error."));
+        return;
+      }
+      resolve(response);
+    });
+  });
+}
+
+// Routes the request to the Mac app's own executable, launched by the
+// browser in a headless native-messaging mode (see native-host/install.sh
+// and NativeMessagingHost.swift in the sibling cv_autofill_mac_app repo).
+// No API key involved — it runs on whichever account is logged into the
+// claude/codex CLI on this Mac.
+async function callNativeBridge(provider, model, parts) {
+  const cli = NATIVE_BRIDGE_PROVIDERS[provider];
+  const prompt = parts
+    .filter((p) => p.type === "text")
+    .map((p) => p.text)
+    .join("\n");
+
+  let response;
+  try {
+    response = await sendNativeMessage(NATIVE_HOST_NAME, { cli, model, prompt });
+  } catch (err) {
+    throw new Error(
+      `Couldn't reach the native bridge (${err.message}). Run native-host/install.sh once from Terminal to set it up — see the extension's README.`
+    );
+  }
+  if (!response) {
+    throw new Error(
+      "The native bridge didn't respond. Run native-host/install.sh once from Terminal to set it up — see the extension's README."
+    );
+  }
+  if (!response.ok) {
+    throw new Error(response.error || `${PROVIDER_LABELS[provider]} error.`);
+  }
+  return parseJsonLoose(response.text || "");
 }
 
 function estimateCostUSD(provider, model, inputTokens, outputTokens) {
@@ -440,9 +440,11 @@ function parseJsonLoose(text) {
 }
 
 async function handleParseCV({ isPdf, base64, text }) {
+  const overrides = await getPromptOverrides();
+  const cvSchemaPrompt = resolvePrompt(overrides, "cvSchema");
   const parts = isPdf
-    ? [{ type: "text", text: CV_SCHEMA_PROMPT }, { type: "pdf", base64 }]
-    : [{ type: "text", text: `${CV_SCHEMA_PROMPT}\n\nCV TEXT:\n${text}` }];
+    ? [{ type: "text", text: cvSchemaPrompt }, { type: "pdf", base64 }]
+    : [{ type: "text", text: `${cvSchemaPrompt}\n\nCV TEXT:\n${text}` }];
 
   const cvData = await callAI(parts);
   await chrome.storage.local.set({ cvData });
@@ -452,10 +454,12 @@ async function handleParseCV({ isPdf, base64, text }) {
 async function handleMapFields({ fields, cvData }) {
   const safeFields = fields.filter((f) => !isSensitiveField(f.label));
   const context = await buildContextBlock();
-  const prompt = `${FIELD_MAP_INSTRUCTIONS}\n\n${context}\n\nCV_DATA:\n${JSON.stringify(cvData)}\n\nFORM_FIELDS:\n${JSON.stringify(safeFields)}`;
+  const overrides = await getPromptOverrides();
+  const fieldMapPrompt = resolvePrompt(overrides, "fieldMap");
+  const prompt = `${fieldMapPrompt}\n\n${context}\n\nCV_DATA:\n${JSON.stringify(cvData)}\n\nFORM_FIELDS:\n${JSON.stringify(safeFields)}`;
 
-  const { taskProviders = {} } = await chrome.storage.local.get("taskProviders");
-  const result = await callAI([{ type: "text", text: prompt }], taskProviders.autofill);
+  const { taskProviders = {}, taskModels = {} } = await chrome.storage.local.get(["taskProviders", "taskModels"]);
+  const result = await callAI([{ type: "text", text: prompt }], taskProviders.autofill, taskModels.autofill);
 
   const fieldByIndex = new Map(fields.map((f) => [f.index, f]));
   const answers = (result.answers || []).filter((a) => {
@@ -472,7 +476,9 @@ async function handleMapFields({ fields, cvData }) {
 async function handleSaveCoverLetter({ isPdf, base64, text }) {
   let coverLetterText;
   if (isPdf) {
-    const result = await callAI([{ type: "text", text: COVER_LETTER_EXTRACT_PROMPT }, { type: "pdf", base64 }]);
+    const overrides = await getPromptOverrides();
+    const extractPrompt = resolvePrompt(overrides, "coverLetterExtract");
+    const result = await callAI([{ type: "text", text: extractPrompt }, { type: "pdf", base64 }]);
     coverLetterText = (result.text || "").trim();
   } else {
     coverLetterText = (text || "").trim();
@@ -485,13 +491,17 @@ async function handleSaveCoverLetter({ isPdf, base64, text }) {
 // the model to pull text out; .docx/.txt are already extracted client-side
 // before this is ever called.
 async function handleExtractDocumentText({ base64 }) {
-  const result = await callAI([{ type: "text", text: DOCUMENT_EXTRACT_PROMPT }, { type: "pdf", base64 }]);
+  const overrides = await getPromptOverrides();
+  const extractPrompt = resolvePrompt(overrides, "documentExtract");
+  const result = await callAI([{ type: "text", text: extractPrompt }, { type: "pdf", base64 }]);
   return { text: (result.text || "").trim() };
 }
 
 async function handleGenerateCoverLetter({ cvData, coverLetterText, jobContext }) {
   const context = await buildContextBlock();
-  const prompt = `${COVER_LETTER_WRITE_PROMPT}
+  const overrides = await getPromptOverrides();
+  const writePrompt = resolvePrompt(overrides, "coverLetterWrite");
+  const prompt = `${writePrompt}
 
 ${context}
 
@@ -504,14 +514,16 @@ ${coverLetterText || "(none provided — write in a clear, professional default 
 JOB_CONTEXT:
 ${jobContext || "(not available)"}`;
 
-  const { taskProviders = {} } = await chrome.storage.local.get("taskProviders");
-  const result = await callAI([{ type: "text", text: prompt }], taskProviders.coverLetter);
+  const { taskProviders = {}, taskModels = {} } = await chrome.storage.local.get(["taskProviders", "taskModels"]);
+  const result = await callAI([{ type: "text", text: prompt }], taskProviders.coverLetter, taskModels.coverLetter);
   return { coverLetter: (result.cover_letter || "").trim() };
 }
 
 async function handleGenerateCvDocx({ cvData, jobContext }) {
   const context = await buildContextBlock();
-  const prompt = `${CV_TAILOR_PROMPT}
+  const overrides = await getPromptOverrides();
+  const tailorPrompt = resolvePrompt(overrides, "cvTailor");
+  const prompt = `${tailorPrompt}
 
 ${context}
 
@@ -521,15 +533,17 @@ ${JSON.stringify(cvData)}
 JOB_CONTEXT:
 ${jobContext || "(not available)"}`;
 
-  const { taskProviders = {} } = await chrome.storage.local.get("taskProviders");
-  const tailoredCv = await callAI([{ type: "text", text: prompt }], taskProviders.tailorCv);
+  const { taskProviders = {}, taskModels = {} } = await chrome.storage.local.get(["taskProviders", "taskModels"]);
+  const tailoredCv = await callAI([{ type: "text", text: prompt }], taskProviders.tailorCv, taskModels.tailorCv);
   return { tailoredCv };
 }
 
 async function handleAskLlm({ cvData, question }) {
   if (!question || !question.trim()) throw new Error("Type a question first.");
   const context = await buildContextBlock();
-  const prompt = `${ASK_PROMPT}
+  const overrides = await getPromptOverrides();
+  const askPrompt = resolvePrompt(overrides, "ask");
+  const prompt = `${askPrompt}
 
 ${context}
 
@@ -557,7 +571,9 @@ function bgBytesToDataUrl(bytes, mimeType) {
 // fire even if the popup that triggered this has since closed.
 async function handleSaveJob({ jobContext, url }) {
   const { taskProviders = {} } = await chrome.storage.local.get("taskProviders");
-  const prompt = `${JOB_EXTRACT_PROMPT}\n\nPAGE_TEXT:\n${jobContext || "(not available)"}`;
+  const overrides = await getPromptOverrides();
+  const jobExtractPrompt = resolvePrompt(overrides, "jobExtract");
+  const prompt = `${jobExtractPrompt}\n\nPAGE_TEXT:\n${jobContext || "(not available)"}`;
   const extracted = await callAI([{ type: "text", text: prompt }], taskProviders.saveJob);
 
   const { savedJobs = [] } = await chrome.storage.local.get("savedJobs");

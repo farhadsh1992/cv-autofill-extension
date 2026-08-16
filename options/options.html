@@ -17,6 +17,7 @@
       <button class="tabBtn" data-tab="ai">AI</button>
       <button class="tabBtn" data-tab="info">Info</button>
       <button class="tabBtn" data-tab="jobs">Jobs</button>
+      <button class="tabBtn" data-tab="prompts">Prompts</button>
     </nav>
 
     <!-- ==================== Appearance ==================== -->
@@ -56,6 +57,58 @@
 
     <!-- ==================== AI ==================== -->
     <div class="tabPanel" id="tab-ai">
+      <section>
+        <h2>Model per action</h2>
+        <p class="muted">
+          Use a different provider — and a different model of that provider —
+          for specific actions, e.g. a cheap model for autofill, a stronger
+          one for rewriting your CV. Leave any of these as "Active provider"
+          to just follow the provider (and its own model) selected further
+          down.
+        </p>
+        <label class="muted" for="taskProviderAutofill" style="display: block; margin-top: 8px">Autofill this page</label>
+        <div class="row">
+          <select id="taskProviderAutofill">
+            <option value="">Active provider</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="kimi">Kimi (Moonshot)</option>
+            <option value="gemini">Gemini (Google)</option>
+            <option value="claudeCode">Claude Code (Terminal)</option>
+            <option value="openaiCode">OpenAI Codex (Terminal)</option>
+          </select>
+          <select id="taskModelAutofill" disabled></select>
+        </div>
+        <label class="muted" for="taskProviderTailorCv" style="display: block; margin-top: 10px">Rebuild / tailor CV</label>
+        <div class="row">
+          <select id="taskProviderTailorCv">
+            <option value="">Active provider</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="kimi">Kimi (Moonshot)</option>
+            <option value="gemini">Gemini (Google)</option>
+            <option value="claudeCode">Claude Code (Terminal)</option>
+            <option value="openaiCode">OpenAI Codex (Terminal)</option>
+          </select>
+          <select id="taskModelTailorCv" disabled></select>
+        </div>
+        <label class="muted" for="taskProviderCoverLetter" style="display: block; margin-top: 10px">Rebuild / write cover letter</label>
+        <div class="row">
+          <select id="taskProviderCoverLetter">
+            <option value="">Active provider</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="kimi">Kimi (Moonshot)</option>
+            <option value="gemini">Gemini (Google)</option>
+            <option value="claudeCode">Claude Code (Terminal)</option>
+            <option value="openaiCode">OpenAI Codex (Terminal)</option>
+          </select>
+          <select id="taskModelCoverLetter" disabled></select>
+        </div>
+      </section>
+
+      <hr />
+
       <section id="spendSection">
         <h2>Estimated spend</h2>
         <p class="muted">
@@ -89,10 +142,13 @@
           <option value="anthropic">Anthropic (Claude)</option>
           <option value="kimi">Kimi (Moonshot)</option>
           <option value="gemini">Gemini (Google)</option>
+          <option value="claudeCode">Claude Code (Terminal)</option>
+          <option value="openaiCode">OpenAI Codex (Terminal)</option>
         </select>
         <p class="muted" style="margin-top: 6px">
           Kimi doesn't support reading uploaded PDF files directly — for CV/cover
           letter/document PDF uploads, switch to OpenAI, Anthropic, or Gemini first.
+          The two Terminal providers don't support PDF uploads either.
         </p>
       </section>
 
@@ -164,37 +220,66 @@
       <hr />
 
       <section>
-        <h2>Model per action</h2>
+        <h2>Terminal providers</h2>
         <p class="muted">
-          Use a different provider for specific actions — e.g. a cheap model for
-          autofill, a stronger one for rewriting your CV. Leave any of these as
-          "Active provider" to just follow the selection above.
+          These two don't use an API key at all — they run through the
+          <code>claude</code>/<code>codex</code> CLI already logged into your
+          Mac's Terminal (your Pro/Max or Plus/Pro/Team subscription), via a
+          small native messaging bridge to the companion Mac app's own
+          executable. A browser extension can't run a terminal or install
+          anything itself, so this needs a one-time setup step outside the
+          browser — see below. Chrome and Firefox only; Safari and Orion
+          don't support this kind of bridge.
         </p>
-        <label class="muted" for="taskProviderAutofill" style="display: block; margin-top: 8px">Autofill this page</label>
-        <select id="taskProviderAutofill">
-          <option value="">Active provider</option>
-          <option value="openai">OpenAI</option>
-          <option value="anthropic">Anthropic (Claude)</option>
-          <option value="kimi">Kimi (Moonshot)</option>
-          <option value="gemini">Gemini (Google)</option>
-        </select>
-        <label class="muted" for="taskProviderTailorCv" style="display: block; margin-top: 10px">Rebuild / tailor CV</label>
-        <select id="taskProviderTailorCv">
-          <option value="">Active provider</option>
-          <option value="openai">OpenAI</option>
-          <option value="anthropic">Anthropic (Claude)</option>
-          <option value="kimi">Kimi (Moonshot)</option>
-          <option value="gemini">Gemini (Google)</option>
-        </select>
-        <label class="muted" for="taskProviderCoverLetter" style="display: block; margin-top: 10px">Rebuild / write cover letter</label>
-        <select id="taskProviderCoverLetter">
-          <option value="">Active provider</option>
-          <option value="openai">OpenAI</option>
-          <option value="anthropic">Anthropic (Claude)</option>
-          <option value="kimi">Kimi (Moonshot)</option>
-          <option value="gemini">Gemini (Google)</option>
-        </select>
       </section>
+
+      <details>
+        <summary>Claude Code (Terminal)</summary>
+        <p class="muted">No API key — uses whatever account is logged into the <code>claude</code> CLI.</p>
+        <div class="row">
+          <button id="checkClaudeCodeBridgeBtn" class="secondary" type="button">Check bridge</button>
+          <span id="claudeCodeBridgeStatus" class="muted"></span>
+        </div>
+        <select id="claudeCodeModel">
+          <option value="default">Default (whatever the CLI picks)</option>
+          <option value="sonnet">Sonnet</option>
+          <option value="opus">Opus</option>
+          <option value="haiku">Haiku</option>
+          <option value="fable">Fable</option>
+        </select>
+        <details class="nestedDetails">
+          <summary>Set up (one-time, in Terminal)</summary>
+          <p class="muted">1. Install Claude Code, then run <code>claude auth login</code> — see <a href="https://code.claude.com/docs/en/overview" target="_blank" rel="noopener">the docs</a>.</p>
+          <p class="muted">2. From this extension's folder, run:</p>
+          <div class="row">
+            <code class="copyableCmd">bash native-host/install.sh</code>
+            <button class="copyCmdBtn secondary" type="button" data-copy="bash native-host/install.sh">Copy</button>
+          </div>
+          <p class="muted">It'll ask for this extension's ID (from chrome://extensions with Developer mode on) and register the bridge. Then come back here and click "Check bridge".</p>
+        </details>
+      </details>
+
+      <details>
+        <summary>OpenAI Codex (Terminal)</summary>
+        <p class="muted">No API key — uses whatever account is logged into the <code>codex</code> CLI.</p>
+        <div class="row">
+          <button id="checkCodexBridgeBtn" class="secondary" type="button">Check bridge</button>
+          <span id="codexBridgeStatus" class="muted"></span>
+        </div>
+        <select id="openaiCodeModel">
+          <option value="default">Default (whatever the CLI picks)</option>
+        </select>
+        <details class="nestedDetails">
+          <summary>Set up (one-time, in Terminal)</summary>
+          <p class="muted">1. Install Codex CLI, then run <code>codex login</code> — see <a href="https://learn.chatgpt.com/docs/codex/cli" target="_blank" rel="noopener">the docs</a>.</p>
+          <p class="muted">2. From this extension's folder, run:</p>
+          <div class="row">
+            <code class="copyableCmd">bash native-host/install.sh</code>
+            <button class="copyCmdBtn secondary" type="button" data-copy="bash native-host/install.sh">Copy</button>
+          </div>
+          <p class="muted">Same installer as Claude Code above — one run sets up both. Then come back here and click "Check bridge".</p>
+        </details>
+      </details>
 
       <div class="row" style="margin-top: 12px">
         <button id="save">Save</button>
@@ -383,6 +468,8 @@
           <option value="anthropic">Anthropic (Claude)</option>
           <option value="kimi">Kimi (Moonshot)</option>
           <option value="gemini">Gemini (Google)</option>
+          <option value="claudeCode">Claude Code (Terminal)</option>
+          <option value="openaiCode">OpenAI Codex (Terminal)</option>
         </select>
 
         <label class="muted" for="jobsFileName" style="display: block; margin-top: 10px">File name (used for both .docx and .json)</label>
@@ -414,8 +501,126 @@
       </section>
     </div>
 
+    <!-- ==================== Prompts ==================== -->
+    <div class="tabPanel" id="tab-prompts">
+      <section>
+        <h2>Prompts</h2>
+        <p class="muted">
+          The exact instructions sent to the AI for each action. Edit and save to
+          change how a task behaves. Leave a box empty (or unchanged) and save
+          to go back to the built-in default.
+        </p>
+      </section>
+
+      <hr />
+
+      <section class="promptSection" data-prompt-key="cvSchema">
+        <h3>Parse CV</h3>
+        <p class="muted">Used whenever a CV is uploaded or pasted, to extract it into structured fields.</p>
+        <textarea class="promptTextarea" rows="10" spellcheck="false"></textarea>
+        <div class="row" style="margin-top: 6px">
+          <button class="promptSaveBtn">Save</button>
+          <button class="promptResetBtn secondary">Reset to default</button>
+          <span class="promptStatus muted"></span>
+        </div>
+      </section>
+
+      <hr />
+
+      <section class="promptSection" data-prompt-key="fieldMap">
+        <h3>Autofill this page</h3>
+        <p class="muted">Used by the popup's Autofill button, to map your CV/context onto a scraped web form's fields.</p>
+        <textarea class="promptTextarea" rows="10" spellcheck="false"></textarea>
+        <div class="row" style="margin-top: 6px">
+          <button class="promptSaveBtn">Save</button>
+          <button class="promptResetBtn secondary">Reset to default</button>
+          <span class="promptStatus muted"></span>
+        </div>
+      </section>
+
+      <hr />
+
+      <section class="promptSection" data-prompt-key="coverLetterExtract">
+        <h3>Extract cover letter text (PDF)</h3>
+        <p class="muted">Used when you upload a PDF as your reference cover letter, to pull its text out.</p>
+        <textarea class="promptTextarea" rows="6" spellcheck="false"></textarea>
+        <div class="row" style="margin-top: 6px">
+          <button class="promptSaveBtn">Save</button>
+          <button class="promptResetBtn secondary">Reset to default</button>
+          <span class="promptStatus muted"></span>
+        </div>
+      </section>
+
+      <hr />
+
+      <section class="promptSection" data-prompt-key="documentExtract">
+        <h3>Extract document text (About Me PDF uploads)</h3>
+        <p class="muted">Used when you upload a PDF under About Me (diploma, certificate, etc.), to transcribe it.</p>
+        <textarea class="promptTextarea" rows="6" spellcheck="false"></textarea>
+        <div class="row" style="margin-top: 6px">
+          <button class="promptSaveBtn">Save</button>
+          <button class="promptResetBtn secondary">Reset to default</button>
+          <span class="promptStatus muted"></span>
+        </div>
+      </section>
+
+      <hr />
+
+      <section class="promptSection" data-prompt-key="coverLetterWrite">
+        <h3>Generate cover letter</h3>
+        <p class="muted">Used by the popup's Generate cover letter action.</p>
+        <textarea class="promptTextarea" rows="10" spellcheck="false"></textarea>
+        <div class="row" style="margin-top: 6px">
+          <button class="promptSaveBtn">Save</button>
+          <button class="promptResetBtn secondary">Reset to default</button>
+          <span class="promptStatus muted"></span>
+        </div>
+      </section>
+
+      <hr />
+
+      <section class="promptSection" data-prompt-key="cvTailor">
+        <h3>Tailor CV (Word)</h3>
+        <p class="muted">Used by the popup's Generate tailored CV action.</p>
+        <textarea class="promptTextarea" rows="10" spellcheck="false"></textarea>
+        <div class="row" style="margin-top: 6px">
+          <button class="promptSaveBtn">Save</button>
+          <button class="promptResetBtn secondary">Reset to default</button>
+          <span class="promptStatus muted"></span>
+        </div>
+      </section>
+
+      <hr />
+
+      <section class="promptSection" data-prompt-key="ask">
+        <h3>Ask AI</h3>
+        <p class="muted">Used by the "Ask AI directly" popup window.</p>
+        <textarea class="promptTextarea" rows="8" spellcheck="false"></textarea>
+        <div class="row" style="margin-top: 6px">
+          <button class="promptSaveBtn">Save</button>
+          <button class="promptResetBtn secondary">Reset to default</button>
+          <span class="promptStatus muted"></span>
+        </div>
+      </section>
+
+      <hr />
+
+      <section class="promptSection" data-prompt-key="jobExtract">
+        <h3>Save this job</h3>
+        <p class="muted">Used by "Save this job", to extract title/company/location/requirements from the page.</p>
+        <textarea class="promptTextarea" rows="6" spellcheck="false"></textarea>
+        <div class="row" style="margin-top: 6px">
+          <button class="promptSaveBtn">Save</button>
+          <button class="promptResetBtn secondary">Reset to default</button>
+          <span class="promptStatus muted"></span>
+        </div>
+      </section>
+    </div>
+
     <script src="../shared/theme.js"></script>
     <script src="../shared/copy-status.js"></script>
+    <script src="../shared/prompts.js"></script>
+    <script src="../shared/models.js"></script>
     <script src="../lib/docx.js"></script>
     <script src="../lib/docx-writer.js"></script>
     <script src="options.js"></script>
