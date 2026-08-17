@@ -1,0 +1,352 @@
+/* Chat-style layout for the "Ask AI" window — overrides windows.css's
+   padded, single-column defaults with a full-height WhatsApp-like column:
+   scrolling message list, fixed composer at the bottom. No header — just
+   the watermark logo behind the messages for branding. */
+
+html,
+body.chatBody {
+  height: 100%;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  position: relative;
+}
+
+.messagesWrap {
+  position: relative;
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow: hidden;
+}
+
+.chatWatermark {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: 55%;
+  max-width: 220px;
+  transform: translate(-50%, -50%);
+  opacity: 0.06;
+  pointer-events: none;
+  user-select: none;
+}
+
+.messages {
+  position: relative;
+  height: 100%;
+  overflow-y: auto;
+  padding: 40px 12px 4px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.activeTaskChip {
+  position: absolute;
+  top: 8px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 6px 4px 12px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--fg);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.15);
+}
+
+.activeTaskChip button {
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+}
+
+.activeTaskChip button:hover {
+  background: var(--panel-hover);
+  color: var(--fg);
+}
+
+.msgRow {
+  display: flex;
+  align-items: flex-end;
+  gap: 4px;
+  max-width: 100%;
+}
+
+.msgRow.user {
+  justify-content: flex-end;
+}
+
+.msgRow.ai {
+  justify-content: flex-start;
+}
+
+.bubble {
+  max-width: 80%;
+  padding: 8px 12px;
+  border-radius: 14px;
+  font-size: 13px;
+  line-height: 1.45;
+  white-space: pre-wrap;
+  word-wrap: break-word;
+}
+
+.msgRow.user .bubble {
+  background: var(--accent);
+  color: #fff;
+  border-bottom-right-radius: 4px;
+}
+
+.msgRow.ai .bubble {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-bottom-left-radius: 4px;
+  cursor: pointer;
+}
+
+.msgRow.ai .bubble:hover {
+  background: var(--panel-hover);
+}
+
+.msgRow.error .bubble {
+  background: transparent;
+  border: 1px solid var(--danger);
+  color: var(--danger);
+}
+
+.copyIconBtn {
+  flex: 0 0 auto;
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  font-size: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+.copyIconBtn:hover {
+  background: var(--panel-hover);
+  color: var(--fg);
+}
+
+.copyIconBtn.copied {
+  color: var(--success);
+}
+
+.typingBubble {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+  padding: 2px 2px;
+}
+
+.typingBubble span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--muted);
+  animation: typingBounce 1.2s infinite ease-in-out;
+}
+
+.typingBubble span:nth-child(2) {
+  animation-delay: 0.15s;
+}
+
+.typingBubble span:nth-child(3) {
+  animation-delay: 0.3s;
+}
+
+@keyframes typingBounce {
+  0%,
+  60%,
+  100% {
+    transform: translateY(0);
+    opacity: 0.5;
+  }
+  30% {
+    transform: translateY(-4px);
+    opacity: 1;
+  }
+}
+
+.composer {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding: 10px 12px;
+  border-top: 1px solid var(--border);
+  background: var(--bg);
+}
+
+.composer textarea {
+  flex: 1;
+  margin: 0;
+  max-height: 100px;
+  resize: none;
+  border-radius: 18px;
+  padding: 9px 14px;
+}
+
+.composer button {
+  flex: 0 0 auto;
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 15px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  line-height: 1;
+}
+
+#tasksBtn {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  font-weight: 600;
+}
+
+#tasksBtn:hover {
+  background: var(--panel-hover);
+}
+
+#tasksBtn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+#attachBtn {
+  background: var(--panel);
+  color: var(--fg);
+  border: 1px solid var(--border);
+  font-size: 14px;
+}
+
+#attachBtn:hover {
+  background: var(--panel-hover);
+}
+
+#attachBtn.active {
+  background: var(--accent);
+  color: #fff;
+  border-color: var(--accent);
+}
+
+.attachmentChip {
+  flex: 0 0 auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0 12px 8px;
+  padding: 5px 6px 5px 12px;
+  border-radius: 999px;
+  background: var(--panel);
+  border: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--fg);
+}
+
+.attachmentChip span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 240px;
+}
+
+.attachmentChip button {
+  flex: 0 0 auto;
+  width: 18px;
+  height: 18px;
+  padding: 0;
+  border-radius: 50%;
+  font-size: 11px;
+  line-height: 1;
+  background: transparent;
+  color: var(--muted);
+  border: none;
+}
+
+.attachmentChip button:hover {
+  background: var(--panel-hover);
+  color: var(--fg);
+}
+
+.tasksPanel {
+  position: absolute;
+  left: 12px;
+  right: 12px;
+  bottom: 62px;
+  max-height: 220px;
+  overflow-y: auto;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+  z-index: 3;
+}
+
+.tasksPanelList {
+  display: flex;
+  flex-direction: column;
+}
+
+.tasksPanelItem {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 9px 12px;
+  background: transparent;
+  color: var(--fg);
+  border: none;
+  border-radius: 0;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.tasksPanelItem:last-child {
+  border-bottom: none;
+}
+
+.tasksPanelItem:hover {
+  background: var(--panel-hover);
+}
+
+.tasksPanelItem.clearItem {
+  color: var(--muted);
+  font-style: italic;
+}
+
+.tasksPanelEmpty {
+  padding: 10px 12px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.status {
+  flex: 0 0 auto;
+  padding: 0 12px 8px;
+  margin-top: 0;
+}

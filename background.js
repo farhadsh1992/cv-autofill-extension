@@ -5,12 +5,14 @@ const ANTHROPIC_URL = "https://api.anthropic.com/v1/messages";
 const ANTHROPIC_VERSION = "2023-06-01";
 const KIMI_URL = "https://api.moonshot.ai/v1/chat/completions";
 const GEMINI_URL_BASE = "https://generativelanguage.googleapis.com/v1beta/models";
+const DEEPSEEK_URL = "https://api.deepseek.com/chat/completions";
 
 const DEFAULT_MODELS = {
   openai: "gpt-4o-mini",
   anthropic: "claude-sonnet-5",
   kimi: "kimi-k2.5",
   gemini: "gemini-3.5-flash",
+  deepseek: "deepseek-v4-flash",
   claudeCode: "default",
   openaiCode: "default",
 };
@@ -20,15 +22,17 @@ const PROVIDER_LABELS = {
   anthropic: "Anthropic (Claude)",
   kimi: "Kimi (Moonshot)",
   gemini: "Gemini (Google)",
+  deepseek: "DeepSeek",
   claudeCode: "Claude Code (Terminal)",
   openaiCode: "OpenAI Codex (Terminal)",
 };
 
-// Kimi's chat completions API doesn't document inline base64 PDF/image
-// content parts (only a separate upload-a-file-first Files API) — so PDF
-// extraction is restricted to the providers that do support it. The two
-// terminal providers don't support it either — the CLIs' headless mode here
-// is plain text-in/text-out, no document upload.
+// Kimi's and DeepSeek's chat completions APIs don't document inline base64
+// PDF/image content parts (only a separate upload-a-file-first Files API for
+// Kimi; DeepSeek's is text-only) — so PDF extraction is restricted to the
+// providers that do support it. The two terminal providers don't support it
+// either — the CLIs' headless mode here is plain text-in/text-out, no
+// document upload.
 const DOCUMENT_CAPABLE_PROVIDERS = ["openai", "anthropic", "gemini"];
 
 // Native messaging host name — registered by native-host/install.sh,
@@ -60,6 +64,15 @@ const PRICING = {
   gemini: {
     "gemini-3.5-flash": { in: 1.5, out: 9.0 },
     "gemini-3.1-pro": { in: 2.0, out: 12.0 },
+  },
+  // DeepSeek bills peak/off-peak (roughly double during 01:00-04:00 and
+  // 06:00-10:00 UTC) — these are the cheaper off-peak rates, so the running
+  // spend estimate runs low during peak hours. Open-weight model, but this
+  // hosted API is still paid per token — only DeepSeek's own consumer chat
+  // app (chat.deepseek.com) is free.
+  deepseek: {
+    "deepseek-v4-flash": { in: 0.22, out: 0.66 },
+    "deepseek-v4-pro": { in: 0.66, out: 1.98 },
   },
 };
 
@@ -222,6 +235,8 @@ async function callAI(parts, providerOverride, modelOverride) {
       return callKimi(apiKey, model, parts);
     case "gemini":
       return callGemini(apiKey, model, parts);
+    case "deepseek":
+      return callDeepSeek(apiKey, model, parts);
     case "openai":
       return callOpenAI(apiKey, model, parts);
     case "claudeCode":
@@ -402,6 +417,38 @@ async function callKimi(apiKey, model, parts) {
   return parseJsonLoose(text);
 }
 
+// DeepSeek's API is OpenAI-compatible chat completions, same shape as Kimi's
+// above (open-source weights, but this hosted API is still billed per token
+// like every provider here — only DeepSeek's own consumer chat app,
+// chat.deepseek.com, is free; that's a separate product from this API).
+async function callDeepSeek(apiKey, model, parts) {
+  const content = parts
+    .filter((p) => p.type === "text")
+    .map((p) => p.text)
+    .join("\n\n");
+  const res = await fetch(DEEPSEEK_URL, {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: JSON.stringify({
+      model,
+      messages: [{ role: "user", content }],
+      response_format: { type: "json_object" },
+    }),
+  });
+  if (!res.ok) {
+    const errText = await res.text();
+    throw new Error(`DeepSeek API error ${res.status}: ${errText.slice(0, 300)}`);
+  }
+  const data = await res.json();
+  const text = data.choices?.[0]?.message?.content || "";
+  const usage = data.usage || {};
+  await recordUsage("deepseek", model, usage.prompt_tokens || 0, usage.completion_tokens || 0);
+  return parseJsonLoose(text);
+}
+
 async function callGemini(apiKey, model, parts) {
   const geminiParts = parts.map((p) =>
     p.type === "pdf" ? { inline_data: { mime_type: "application/pdf", data: p.base64 } } : { text: p.text }
@@ -538,22 +585,48 @@ ${jobContext || "(not available)"}`;
   return { tailoredCv };
 }
 
-async function handleAskLlm({ cvData, question }) {
+// `history` is the chat window's prior turns — [{role: "user"|"ai", content}]
+// — sent fresh on every call since these are stateless HTTP APIs with no
+// server-side memory between requests. Folded into the prompt so the model
+// can reference earlier answers ("what about the one before that?").
+// `presetPrompt` is a saved task's instructions (Options → Ask AI → Saved
+// tasks), attached by the chat window's # button — extra, user-authored
+// instructions layered on top of the base ask prompt, not a replacement.
+// `attachedFileText` (.docx/.txt, extracted client-side) is folded straight
+// into the prompt text — works with any provider. `attachedFilePdfBase64`
+// becomes a "pdf" content part instead, so it goes through callAI's normal
+// document-capable-provider check and gets the same clear error as CV/cover
+// letter PDF uploads do when the current provider doesn't support it.
+async function handleAskLlm({ cvData, question, history, presetPrompt, attachedFileName, attachedFileText, attachedFilePdfBase64 }) {
   if (!question || !question.trim()) throw new Error("Type a question first.");
   const context = await buildContextBlock();
   const overrides = await getPromptOverrides();
   const askPrompt = resolvePrompt(overrides, "ask");
+  const historyBlock = (history || [])
+    .map((m) => `${m.role === "user" ? "APPLICANT" : "YOU"}: ${m.content}`)
+    .join("\n\n");
+  const taskBlock = presetPrompt && presetPrompt.trim() ? `\nTASK_INSTRUCTIONS (apply these for this conversation):\n${presetPrompt.trim()}\n` : "";
+  const attachedTextBlock =
+    attachedFileText && attachedFileText.trim() ? `\nATTACHED_FILE (${attachedFileName || "file"}):\n${attachedFileText.trim()}\n` : "";
+  const attachedPdfNote = attachedFilePdfBase64 ? `\nAn attached file (${attachedFileName || "file"}) follows as a PDF.\n` : "";
   const prompt = `${askPrompt}
-
+${taskBlock}${attachedTextBlock}${attachedPdfNote}
 ${context}
 
 CV_DATA:
 ${JSON.stringify(cvData || {})}
 
-QUESTION:
+CONVERSATION_SO_FAR:
+${historyBlock || "(none — this is the first message)"}
+
+NEW_QUESTION:
 ${question.trim()}`;
 
-  const result = await callAI([{ type: "text", text: prompt }]);
+  const parts = [{ type: "text", text: prompt }];
+  if (attachedFilePdfBase64) parts.push({ type: "pdf", base64: attachedFilePdfBase64 });
+
+  const { taskProviders = {}, taskModels = {} } = await chrome.storage.local.get(["taskProviders", "taskModels"]);
+  const result = await callAI(parts, taskProviders.ask, taskModels.ask);
   return { answer: (result.answer || "").trim() };
 }
 

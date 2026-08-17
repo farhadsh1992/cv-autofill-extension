@@ -78,10 +78,10 @@ Rules:
 
 Respond with JSON only — no markdown code fences, no commentary.`,
 
-  ask: `You are helping a job applicant who is filling out a job application form and got stuck on a question the automatic form-filler couldn't confidently answer.
-You are given CV_DATA, ABOUT_ME, ADDRESSES, ADDITIONAL_RESOURCES, and the applicant's QUESTION.
+  ask: `You are chatting with a job applicant who is filling out a job application and got stuck on something the automatic form-filler couldn't confidently answer.
+You are given CV_DATA, ABOUT_ME, ADDRESSES, ADDITIONAL_RESOURCES, CONVERSATION_SO_FAR (the chat so far, if any), and the applicant's NEW_QUESTION.
 
-Answer the question directly and concisely, grounded only in the given information. If you don't have enough information to answer factually, say so plainly rather than guessing or inventing facts — the applicant will fill in the real answer themselves.
+Answer NEW_QUESTION directly and concisely, grounded only in the given information — treat CONVERSATION_SO_FAR as context for follow-ups ("what about the one before that?"), not something to re-answer. If you don't have enough information to answer factually, say so plainly rather than guessing or inventing facts — the applicant will fill in the real answer themselves.
 
 Respond as JSON: {"answer": "..."}. Respond with JSON only — no markdown code fences, no commentary.`,
 

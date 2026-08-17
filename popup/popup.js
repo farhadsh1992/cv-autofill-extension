@@ -70,8 +70,34 @@ generateCvDocxBtn.addEventListener("click", handleGenerateCvDocx);
 addInfoBtn.addEventListener("click", () => {
   chrome.windows.create({ url: chrome.runtime.getURL("windows/add-resource.html"), type: "popup", width: 420, height: 460, focused: true });
 });
-askBtn.addEventListener("click", () => {
-  chrome.windows.create({ url: chrome.runtime.getURL("windows/ask.html"), type: "popup", width: 460, height: 520, focused: true });
+// Computed here (not in background.js) because a service worker has no
+// `window`/`screen` object — this popup page does, since it's a real
+// document. Reflects whichever display the popup itself opened on.
+function askWindowBounds(position) {
+  const width = 400;
+  const height = 620;
+  const margin = 20;
+  const availW = window.screen.availWidth;
+  const availH = window.screen.availHeight;
+  switch (position) {
+    case "top-left":
+      return { left: margin, top: margin, width, height };
+    case "top-right":
+      return { left: Math.max(0, availW - width - margin), top: margin, width, height };
+    case "bottom-left":
+      return { left: margin, top: Math.max(0, availH - height - margin), width, height };
+    case "bottom-right":
+      return { left: Math.max(0, availW - width - margin), top: Math.max(0, availH - height - margin), width, height };
+    case "center":
+    default:
+      return { left: Math.max(0, Math.round((availW - width) / 2)), top: Math.max(0, Math.round((availH - height) / 2)), width, height };
+  }
+}
+
+askBtn.addEventListener("click", async () => {
+  const { askWindowPosition = "center" } = await chrome.storage.local.get("askWindowPosition");
+  const bounds = askWindowBounds(askWindowPosition);
+  chrome.windows.create({ url: chrome.runtime.getURL("windows/ask.html"), type: "popup", focused: true, ...bounds });
 });
 saveJobBtn.addEventListener("click", handleSaveJob);
 

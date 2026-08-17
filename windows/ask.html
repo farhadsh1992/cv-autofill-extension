@@ -4,26 +4,36 @@
     <meta charset="utf-8" />
     <title>Ask AI</title>
     <link rel="stylesheet" href="windows.css" />
+    <link rel="stylesheet" href="ask.css" />
   </head>
-  <body>
-    <h1>Ask AI directly</h1>
-    <p class="muted">For when autofill couldn't confidently answer something. Uses your saved CV and resources as context.</p>
-
-    <textarea id="question" rows="3" placeholder="e.g. How should I answer &quot;expected salary&quot;?" autofocus></textarea>
-
-    <div class="row">
-      <button id="ask">Ask</button>
+  <body class="chatBody">
+    <div class="messagesWrap">
+      <img src="../icons/icon-256.png" alt="" class="chatWatermark" />
+      <div id="messages" class="messages"></div>
     </div>
 
-    <div id="answerBox" class="answerBox hidden"></div>
-    <div class="row">
-      <button id="copyBtn" class="secondary hidden">Copy answer</button>
+    <div id="tasksPanel" class="tasksPanel hidden">
+      <div id="tasksPanelList" class="tasksPanelList"></div>
     </div>
+
+    <div id="attachmentChip" class="attachmentChip hidden">
+      <span id="attachmentName"></span>
+      <button id="removeAttachmentBtn" type="button" aria-label="Remove attachment" title="Remove attachment">×</button>
+    </div>
+
+    <form id="composerForm" class="composer">
+      <button id="tasksBtn" type="button" aria-label="Saved tasks" title="Saved tasks">#</button>
+      <button id="attachBtn" type="button" aria-label="Attach a file" title="Attach a file (PDF, Word, or text)">📎</button>
+      <input type="file" id="fileInput" accept=".pdf,.docx,.txt" hidden />
+      <textarea id="question" rows="1" placeholder="Message" autofocus></textarea>
+      <button id="ask" type="submit" aria-label="Send">➤</button>
+    </form>
 
     <div id="status" class="status"></div>
 
     <script src="../shared/theme.js"></script>
     <script src="../shared/copy-status.js"></script>
+    <script src="../lib/docx.js"></script>
     <script src="ask.js"></script>
   </body>
 </html>

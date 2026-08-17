@@ -22,6 +22,10 @@ const MODEL_CATALOG = {
     { value: "gemini-3.5-flash", label: "gemini-3.5-flash (fastest/cheapest)" },
     { value: "gemini-3.1-pro", label: "gemini-3.1-pro (most capable)" },
   ],
+  deepseek: [
+    { value: "deepseek-v4-flash", label: "deepseek-v4-flash (fastest/cheapest)" },
+    { value: "deepseek-v4-pro", label: "deepseek-v4-pro-0813 (most capable)" },
+  ],
   // Aliases the claude CLI's --model flag accepts; "default" omits the flag
   // entirely and lets the CLI pick its own default model.
   claudeCode: [

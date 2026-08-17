@@ -15,6 +15,7 @@
     <nav class="tabBar">
       <button class="tabBtn active" data-tab="appearance">Appearance</button>
       <button class="tabBtn" data-tab="ai">AI</button>
+      <button class="tabBtn" data-tab="askai">Ask AI</button>
       <button class="tabBtn" data-tab="info">Info</button>
       <button class="tabBtn" data-tab="jobs">Jobs</button>
       <button class="tabBtn" data-tab="prompts">Prompts</button>
@@ -74,6 +75,7 @@
             <option value="anthropic">Anthropic (Claude)</option>
             <option value="kimi">Kimi (Moonshot)</option>
             <option value="gemini">Gemini (Google)</option>
+            <option value="deepseek">DeepSeek</option>
             <option value="claudeCode">Claude Code (Terminal)</option>
             <option value="openaiCode">OpenAI Codex (Terminal)</option>
           </select>
@@ -87,6 +89,7 @@
             <option value="anthropic">Anthropic (Claude)</option>
             <option value="kimi">Kimi (Moonshot)</option>
             <option value="gemini">Gemini (Google)</option>
+            <option value="deepseek">DeepSeek</option>
             <option value="claudeCode">Claude Code (Terminal)</option>
             <option value="openaiCode">OpenAI Codex (Terminal)</option>
           </select>
@@ -100,6 +103,7 @@
             <option value="anthropic">Anthropic (Claude)</option>
             <option value="kimi">Kimi (Moonshot)</option>
             <option value="gemini">Gemini (Google)</option>
+            <option value="deepseek">DeepSeek</option>
             <option value="claudeCode">Claude Code (Terminal)</option>
             <option value="openaiCode">OpenAI Codex (Terminal)</option>
           </select>
@@ -112,10 +116,11 @@
       <section id="spendSection">
         <h2>Estimated spend</h2>
         <p class="muted">
-          A running total across all four providers below, estimated from each
-          model's published price per token. This is not a real invoice — check
-          your provider's own billing dashboard for what you're actually
-          charged.
+          A running total across every provider below that bills per token,
+          estimated from each model's published price. This is not a real
+          invoice — check your provider's own billing dashboard for what
+          you're actually charged. The two Terminal providers run on a flat
+          subscription instead, so they always show $0 here.
         </p>
         <div class="row" style="align-items: baseline">
           <span id="totalSpent" style="font-size: 1.4em; font-weight: 600">$0.0000</span>
@@ -142,13 +147,15 @@
           <option value="anthropic">Anthropic (Claude)</option>
           <option value="kimi">Kimi (Moonshot)</option>
           <option value="gemini">Gemini (Google)</option>
+          <option value="deepseek">DeepSeek</option>
           <option value="claudeCode">Claude Code (Terminal)</option>
           <option value="openaiCode">OpenAI Codex (Terminal)</option>
         </select>
         <p class="muted" style="margin-top: 6px">
-          Kimi doesn't support reading uploaded PDF files directly — for CV/cover
-          letter/document PDF uploads, switch to OpenAI, Anthropic, or Gemini first.
-          The two Terminal providers don't support PDF uploads either.
+          Kimi and DeepSeek don't support reading uploaded PDF files directly —
+          for CV/cover letter/document PDF uploads, switch to OpenAI, Anthropic,
+          or Gemini first. The two Terminal providers don't support PDF uploads
+          either.
         </p>
       </section>
 
@@ -214,6 +221,23 @@
         <select id="geminiModel">
           <option value="gemini-3.5-flash">gemini-3.5-flash (default, fastest/cheapest)</option>
           <option value="gemini-3.1-pro">gemini-3.1-pro (most capable)</option>
+        </select>
+      </details>
+
+      <details>
+        <summary>DeepSeek API key</summary>
+        <p class="muted">
+          Stored only in this browser's local extension storage — never sent anywhere
+          except directly to <code>api.deepseek.com</code>. Get one at
+          <a href="https://platform.deepseek.com/api_keys" target="_blank" rel="noopener">platform.deepseek.com/api_keys</a>.
+          Open-weight model, but this API is still billed per token like the others
+          above — only DeepSeek's own consumer chat app (chat.deepseek.com) is free.
+        </p>
+        <input type="password" id="deepseekApiKey" placeholder="sk-..." autocomplete="off" />
+        <label class="checkboxRow"><input type="checkbox" id="showDeepseekKey" /> Show key</label>
+        <select id="deepseekModel">
+          <option value="deepseek-v4-flash">deepseek-v4-flash (default, fastest/cheapest)</option>
+          <option value="deepseek-v4-pro">deepseek-v4-pro-0813 (most capable)</option>
         </select>
       </details>
 
@@ -285,6 +309,70 @@
         <button id="save">Save</button>
         <span id="saveStatus" class="muted"></span>
       </div>
+    </div>
+
+    <!-- ==================== Ask AI ==================== -->
+    <div class="tabPanel" id="tab-askai">
+      <section>
+        <h2>Model</h2>
+        <p class="muted">
+          Which provider and model the "Ask AI directly" chat window uses.
+          Leave as "Active provider" to just follow the provider selected in
+          the AI tab. Saves as soon as you change it.
+        </p>
+        <div class="row">
+          <select id="taskProviderAsk">
+            <option value="">Active provider</option>
+            <option value="openai">OpenAI</option>
+            <option value="anthropic">Anthropic (Claude)</option>
+            <option value="kimi">Kimi (Moonshot)</option>
+            <option value="gemini">Gemini (Google)</option>
+            <option value="deepseek">DeepSeek</option>
+            <option value="claudeCode">Claude Code (Terminal)</option>
+            <option value="openaiCode">OpenAI Codex (Terminal)</option>
+          </select>
+          <select id="taskModelAsk" disabled></select>
+        </div>
+      </section>
+
+      <hr />
+
+      <section>
+        <h2>Chat window position</h2>
+        <p class="muted">Where "Ask AI directly" opens on your screen.</p>
+        <select id="askWindowPosition">
+          <option value="center">Center</option>
+          <option value="top-left">Top left</option>
+          <option value="top-right">Top right</option>
+          <option value="bottom-left">Bottom left</option>
+          <option value="bottom-right">Bottom right</option>
+        </select>
+      </section>
+
+      <hr />
+
+      <section>
+        <h2>Saved tasks</h2>
+        <p class="muted">
+          Reusable instructions for the Ask AI chat — write one once, give it
+          a label, then pull it back up with the <strong>#</strong> button in
+          the chat window instead of retyping it. Once selected, a task's
+          instructions apply to every message in that chat until you clear it
+          or pick a different one.
+        </p>
+
+        <p class="muted" id="askPresetFormLabel" style="margin-top: 10px">Add a task</p>
+        <input type="text" id="askPresetLabel" placeholder="Label — e.g. Interview prep" />
+        <textarea id="askPresetPrompt" rows="3" placeholder="Instructions for the AI to follow for this task"></textarea>
+        <div class="row">
+          <button id="addAskPresetBtn">Add task</button>
+          <button id="cancelAskPresetEditBtn" class="secondary hidden" type="button">Cancel</button>
+        </div>
+        <div id="askPresetStatus" class="muted" style="margin-top: 8px"></div>
+
+        <p class="muted" style="margin-top: 14px">Saved tasks</p>
+        <div id="askPresetList" class="resourceList"></div>
+      </section>
     </div>
 
     <!-- ==================== Info ==================== -->
@@ -468,6 +556,7 @@
           <option value="anthropic">Anthropic (Claude)</option>
           <option value="kimi">Kimi (Moonshot)</option>
           <option value="gemini">Gemini (Google)</option>
+          <option value="deepseek">DeepSeek</option>
           <option value="claudeCode">Claude Code (Terminal)</option>
           <option value="openaiCode">OpenAI Codex (Terminal)</option>
         </select>

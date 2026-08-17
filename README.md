@@ -25,7 +25,7 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
 1. **Upload your CV and (optionally) a past cover letter** from the
    extension's **Options** page — PDF, Word (.docx), or pasted text, for
    each. The CV is sent to your active AI provider (OpenAI, Anthropic/Claude,
-   Kimi/Moonshot, or Gemini/Google — see below) and parsed into structured
+   Kimi/Moonshot, Gemini/Google, or DeepSeek — see below) and parsed into structured
    JSON (name, contact info, work history, education, skills); the cover
    letter is saved as reference text (only PDFs need an AI call to extract
    their text — .docx and pasted text are handled locally, no API call).
@@ -52,10 +52,23 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
    reused in the generated file, instead of a plain black-and-white template.
 6. **Add info** (popup button) pops open a small window to jot down anything
    else worth the AI knowing — saved as a resource, same as CV/cover letter.
-7. **Ask AI directly** (popup button) opens a small Q&A window for when
-   autofill couldn't confidently answer something — it uses your saved CV
-   and resources as context and gives you a direct answer to copy in
-   yourself.
+7. **Ask AI directly** (popup button) opens a small chat window — WhatsApp-
+   style bubbles, for when autofill couldn't confidently answer something.
+   Every message is grounded in your saved CV, About Me notes, addresses,
+   and resources, and the whole conversation so far is sent along with each
+   new message so follow-ups work naturally. Every AI answer has a small
+   copy icon next to it (the bubble itself is also click-to-copy). No
+   header — just the message list and composer, with the app logo as a
+   faint watermark behind the messages. The conversation is in-memory
+   only — closing the window starts fresh.
+   The **#** button opens your saved tasks (Options → Ask AI → Saved
+   tasks) — pick one and its instructions apply to every message in that
+   chat, shown as a "#label" chip, until you clear it or switch to a
+   different one. The **📎** button attaches a PDF, Word (.docx), or .txt
+   file to your next message — its text (extracted locally for .docx/.txt;
+   sent as a PDF part for providers that support it) is used for that one
+   answer, not resent on later turns. Its own provider/model and where it
+   opens on your screen are set in **Options → Ask AI**.
 8. **Save this job** (popup button) scrapes the current page, asks the model
    to pull out the job title/company/location/a short requirements summary,
    and adds a row to an "applied jobs" table kept in the extension's own
@@ -92,8 +105,8 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
 
 ## Options page layout
 
-The Options page is split into five tabs: **Appearance**, **AI**, **Info**,
-**Jobs**, and **Prompts**.
+The Options page is split into six tabs: **Appearance**, **AI**, **Ask AI**,
+**Info**, **Jobs**, and **Prompts**.
 
 - **Appearance** — Theme (System/Light/Dark, overriding your OS everywhere
   in the extension — popup, options, and the small windows) and Button color
@@ -105,9 +118,21 @@ The Options page is split into five tabs: **Appearance**, **AI**, **Info**,
   choice below (e.g. a cheap model for autofill, a stronger one for
   rewriting your CV). Each task defaults to "Active provider" until set
   otherwise — picking a specific provider there reveals a model dropdown for
-  it. Below that: the estimated spend counter, and the six providers' API
+  it. Below that: the estimated spend counter, and the seven providers' API
   keys/models plus which one is "active" (the default every task without its
   own override uses).
+- **Ask AI** — settings for the "Ask AI directly" chat window specifically,
+  separate from the AI tab above:
+  - **Model** — its own provider + model picker (same shape as Model per
+    action; auto-saves as soon as you change it, unlike the AI tab's
+    batched Save button).
+  - **Chat window position** — where the window opens on your screen
+    (Center, or one of the four corners).
+  - **Saved tasks** — reusable instructions with a label, e.g. "Interview
+    prep". Pull one up with the **#** button in the chat window instead of
+    retyping its instructions every time; it stays attached to every
+    message in that chat (shown as a small "#label" chip) until cleared or
+    swapped for another.
 - **Info** — your CV, cover letter, About Me notes, addresses, resources,
   and backup export/import. Everything the AI draws on as context.
 - **Jobs** — which model extracts job details for "Save this job", the
@@ -125,7 +150,7 @@ The Options page is split into five tabs: **Appearance**, **AI**, **Info**,
 
 ## Terminal providers (Claude Code / Codex — no API key)
 
-Besides the four API-key providers, Options → AI also offers **Claude Code
+Besides the five API-key providers, Options → AI also offers **Claude Code
 (Terminal)** and **OpenAI Codex (Terminal)** — these run through the
 `claude`/`codex` CLI already logged into this Mac's Terminal (your Pro/Max or
 Plus/Pro/Team subscription), instead of a per-token API key.
@@ -170,7 +195,7 @@ confirm it's wired up.
 
 ## Setup
 
-**Options → AI provider** lets you add a key for as many of the four
+**Options → AI provider** lets you add a key for as many of the five
 API-key providers as you want — they're all kept ready to use — then pick
 which one is **active** with the "Currently using" dropdown (this dropdown
 also includes the two terminal providers described above, once their bridge
@@ -180,17 +205,23 @@ is set up). Switch anytime without re-entering anything.
 - Anthropic: https://console.anthropic.com/settings/keys (`claude-sonnet-5` is the default model)
 - Kimi (Moonshot): https://platform.moonshot.ai/console/api-keys (`kimi-k2.5` is the default model)
 - Gemini (Google): https://aistudio.google.com/apikey (`gemini-3.5-flash` is the default model)
+- DeepSeek: https://platform.deepseek.com/api_keys (`deepseek-v4-flash` is the default model)
 
 Each needs a real API key from that provider's own developer console, billed
 per call — none of them offer a public "log in with your consumer chat
 account" flow for third-party extensions like this one, so there's no way to
 reuse a ChatGPT Plus / Claude Pro / Gemini Advanced subscription here.
+**DeepSeek is no exception**: its weights are open-source, but this hosted
+API bills per token just like the other four — only DeepSeek's own consumer
+chat app (chat.deepseek.com) is free, and that's a separate product this
+extension doesn't use.
 
-**Kimi doesn't support reading uploaded PDF files** (its API only documents
-a separate file-upload endpoint, not inline PDFs in a chat message) — CV,
-cover letter, and About-Me PDF uploads need OpenAI, Anthropic, or Gemini
-active instead. Everything else (autofill, cover letter writing, CV
-tailoring, Ask AI) works with any of the four.
+**Kimi and DeepSeek don't support reading uploaded PDF files** (Kimi's API
+only documents a separate file-upload endpoint, not inline PDFs in a chat
+message; DeepSeek's is text-only) — CV, cover letter, and About-Me PDF
+uploads need OpenAI, Anthropic, or Gemini active instead. Everything else
+(autofill, cover letter writing, CV tailoring, Ask AI) works with any of
+the five.
 
 ### Estimated spend
 
@@ -293,11 +324,13 @@ point it at this folder. See [INSTALL.txt](INSTALL.txt) for more detail.
 
 ```
 manifest.json           Manifest V3 config
-background.js           Service worker — calls OpenAI/Anthropic/Kimi/Gemini APIs, tracks estimated spend
+background.js           Service worker — calls OpenAI/Anthropic/Kimi/Gemini/DeepSeek APIs, tracks estimated spend
 shared/blocklist.js     Sensitive-field keyword filter, shared by background + popup
 shared/theme.js         Applies manual theme/accent-color overrides on every page
 shared/prompts.js       Default per-task AI instruction text (DEFAULT_PROMPTS), shared by
                         background.js and options.js's Prompts tab
+shared/models.js        Per-provider model catalog (MODEL_CATALOG), shared by background.js and
+                        options.js's Model per action pickers
 native-host/install.sh  One-time setup for the Claude Code/Codex terminal providers — registers
                         the sibling Mac app as a Chrome/Firefox native messaging host
 lib/docx.js             Standalone .docx → plain text/style extractor (no external library)

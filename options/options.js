@@ -16,11 +16,17 @@ const taskProviderSelects = {
   autofill: document.getElementById("taskProviderAutofill"),
   tailorCv: document.getElementById("taskProviderTailorCv"),
   coverLetter: document.getElementById("taskProviderCoverLetter"),
+  // "ask" lives on its own Ask AI tab rather than alongside the other three
+  // here — it still shares this same object (for populateTaskModelSelect
+  // and initial load below) but auto-saves on change instead of waiting for
+  // the AI tab's batched Save button, since that tab isn't visible from here.
+  ask: document.getElementById("taskProviderAsk"),
 };
 const taskModelSelects = {
   autofill: document.getElementById("taskModelAutofill"),
   tailorCv: document.getElementById("taskModelTailorCv"),
   coverLetter: document.getElementById("taskModelCoverLetter"),
+  ask: document.getElementById("taskModelAsk"),
 };
 
 // Fills a task's model <select> with MODEL_CATALOG's options for whichever
@@ -53,6 +59,7 @@ const PROVIDER_FIELD_IDS = {
   anthropic: { apiKey: "anthropicApiKey", showKey: "showAnthropicKey", model: "anthropicModel" },
   kimi: { apiKey: "kimiApiKey", showKey: "showKimiKey", model: "kimiModel" },
   gemini: { apiKey: "geminiApiKey", showKey: "showGeminiKey", model: "geminiModel" },
+  deepseek: { apiKey: "deepseekApiKey", showKey: "showDeepseekKey", model: "deepseekModel" },
 };
 const providerFields = {};
 for (const [id, fieldIds] of Object.entries(PROVIDER_FIELD_IDS)) {
@@ -133,6 +140,15 @@ const jobsTableWrapEl = document.getElementById("jobsTableWrap");
 
 const promptSections = document.querySelectorAll(".promptSection");
 
+const askWindowPositionSelect = document.getElementById("askWindowPosition");
+const askPresetFormLabel = document.getElementById("askPresetFormLabel");
+const askPresetLabelInput = document.getElementById("askPresetLabel");
+const askPresetPromptArea = document.getElementById("askPresetPrompt");
+const addAskPresetBtn = document.getElementById("addAskPresetBtn");
+const cancelAskPresetEditBtn = document.getElementById("cancelAskPresetEditBtn");
+const askPresetStatus = document.getElementById("askPresetStatus");
+const askPresetListEl = document.getElementById("askPresetList");
+
 // ---- Tabs ----
 
 for (const btn of tabBtns) {
@@ -164,6 +180,8 @@ async function init() {
     "savedJobs",
     "jobsFileName",
     "promptOverrides",
+    "askWindowPosition",
+    "askAIPresets",
     // legacy single/dual-provider keys from before multi-provider support
     "provider",
     "openaiApiKey",
@@ -214,6 +232,9 @@ async function init() {
   claudeCodeModelSelect.value = (providers.claudeCode || {}).model || "default";
   openaiCodeModelSelect.value = (providers.openaiCode || {}).model || "default";
 
+  askWindowPositionSelect.value = stored.askWindowPosition || "center";
+  renderAskPresets(stored.askAIPresets || []);
+
   if (stored.cvData) cvJsonArea.value = JSON.stringify(stored.cvData, null, 2);
   if (stored.cvStyle) renderCvStyle(stored.cvStyle);
   if (stored.coverLetterText) coverLetterTextArea.value = stored.coverLetterText;
@@ -242,6 +263,135 @@ for (const fields of Object.values(providerFields)) {
 for (const [task, select] of Object.entries(taskProviderSelects)) {
   select.addEventListener("change", () => populateTaskModelSelect(task));
 }
+
+// The Ask AI tab has no Save button of its own (everything on it auto-saves,
+// like Appearance) — autofill/tailorCv/coverLetter still batch through the
+// AI tab's Save button above, only "ask" needs this immediate-write path.
+async function saveAskTaskSetting() {
+  const { taskProviders: existing = {}, taskModels: existingModels = {} } =
+    await chrome.storage.local.get(["taskProviders", "taskModels"]);
+  const taskProviders = { ...existing, ask: taskProviderSelects.ask.value };
+  const taskModels = { ...existingModels, ask: taskProviderSelects.ask.value ? taskModelSelects.ask.value : "" };
+  await chrome.storage.local.set({ taskProviders, taskModels });
+}
+taskProviderSelects.ask.addEventListener("change", saveAskTaskSetting);
+taskModelSelects.ask.addEventListener("change", saveAskTaskSetting);
+
+askWindowPositionSelect.addEventListener("change", () => {
+  chrome.storage.local.set({ askWindowPosition: askWindowPositionSelect.value });
+});
+
+function renderAskPresets(presets) {
+  askPresetListEl.innerHTML = "";
+  if (!presets.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No saved tasks yet.";
+    askPresetListEl.appendChild(empty);
+    return;
+  }
+
+  for (const p of presets.slice().reverse()) {
+    const item = document.createElement("div");
+    item.className = "resourceItem";
+
+    const meta = document.createElement("div");
+    meta.className = "resourceMeta";
+    const label = document.createElement("div");
+    label.className = "resourceLabel";
+    label.textContent = p.label || "Task";
+    makeCopyable(label, p.label || "");
+    const preview = document.createElement("div");
+    preview.className = "resourcePreview";
+    preview.textContent = p.prompt || "";
+    makeCopyable(preview, p.prompt || "");
+    meta.appendChild(label);
+    meta.appendChild(preview);
+
+    const btnRow = document.createElement("div");
+    btnRow.className = "row";
+    btnRow.style.marginTop = "0";
+
+    const editBtn = document.createElement("button");
+    editBtn.className = "secondary";
+    editBtn.textContent = "Edit";
+    editBtn.addEventListener("click", () => startEditingAskPreset(p));
+
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "secondary";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", async () => {
+      const { askAIPresets: current = [] } = await chrome.storage.local.get("askAIPresets");
+      const next = current.filter((x) => x.id !== p.id);
+      await chrome.storage.local.set({ askAIPresets: next });
+      if (editingAskPresetId === p.id) cancelEditingAskPreset();
+      renderAskPresets(next);
+    });
+
+    btnRow.appendChild(editBtn);
+    btnRow.appendChild(removeBtn);
+    item.appendChild(meta);
+    item.appendChild(btnRow);
+    askPresetListEl.appendChild(item);
+  }
+}
+
+// null while adding a new task; the preset's id while editing an existing
+// one — addAskPresetBtn's handler branches on this instead of always
+// pushing a new entry.
+let editingAskPresetId = null;
+
+function startEditingAskPreset(preset) {
+  editingAskPresetId = preset.id;
+  askPresetLabelInput.value = preset.label || "";
+  askPresetPromptArea.value = preset.prompt || "";
+  askPresetFormLabel.textContent = `Editing "${preset.label || "Task"}"`;
+  addAskPresetBtn.textContent = "Save changes";
+  cancelAskPresetEditBtn.classList.remove("hidden");
+  askPresetLabelInput.focus();
+}
+
+function cancelEditingAskPreset() {
+  editingAskPresetId = null;
+  askPresetLabelInput.value = "";
+  askPresetPromptArea.value = "";
+  askPresetFormLabel.textContent = "Add a task";
+  addAskPresetBtn.textContent = "Add task";
+  cancelAskPresetEditBtn.classList.add("hidden");
+}
+
+cancelAskPresetEditBtn.addEventListener("click", () => {
+  cancelEditingAskPreset();
+  flash(askPresetStatus, "");
+});
+
+addAskPresetBtn.addEventListener("click", async () => {
+  const label = askPresetLabelInput.value.trim();
+  const prompt = askPresetPromptArea.value.trim();
+  if (!label) {
+    flash(askPresetStatus, "Give it a label first.", true);
+    return;
+  }
+  if (!prompt) {
+    flash(askPresetStatus, "Write the instructions first.", true);
+    return;
+  }
+  const { askAIPresets = [] } = await chrome.storage.local.get("askAIPresets");
+  if (editingAskPresetId) {
+    const target = askAIPresets.find((x) => x.id === editingAskPresetId);
+    if (target) {
+      target.label = label;
+      target.prompt = prompt;
+    }
+  } else {
+    askAIPresets.push({ id: crypto.randomUUID(), label, prompt });
+  }
+  await chrome.storage.local.set({ askAIPresets });
+  const wasEditing = !!editingAskPresetId;
+  renderAskPresets(askAIPresets);
+  cancelEditingAskPreset();
+  flash(askPresetStatus, wasEditing ? "Task updated." : "Task added.");
+});
 
 // ---- Appearance ----
 
@@ -813,6 +963,8 @@ const BACKUP_KEYS = [
   "savedJobs",
   "jobsFileName",
   "promptOverrides",
+  "askWindowPosition",
+  "askAIPresets",
 ];
 
 exportBackupBtn.addEventListener("click", async () => {
