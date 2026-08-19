@@ -23,10 +23,10 @@ let busy = false;
 // null. Its prompt is attached to every message until cleared or swapped —
 // that's the whole point (write it once, don't retype it).
 let activePreset = null;
-// A file staged for the *next* message only (unlike activePreset, this
-// isn't sticky — attach, send, gone). {name, kind: "pdf"|"text", data}
-// where data is a base64 string for "pdf" or the extracted plain text for
-// "text" (.docx is extracted locally via lib/docx.js; .txt is read as-is).
+// A file staged for the *next* message. {name, text}. Also saved as a
+// permanent About Me note the moment it's attached (see fileInput's change
+// handler below) — so it's remembered for every future question (and every
+// other AI task) without re-attaching it each time.
 let pendingAttachment = null;
 
 questionArea.focus();
@@ -145,27 +145,52 @@ function isPdfFile(file) {
 
 attachBtn.addEventListener("click", () => fileInput.click());
 
+// Extracted text either way — PDFs need an AI call to read (no PDF parser
+// in a browser extension sandbox), .docx is read locally via lib/docx.js,
+// .txt is read as-is. This also means any provider can use the attachment
+// afterward, not just document-capable ones.
 fileInput.addEventListener("change", async () => {
   const file = fileInput.files[0];
   fileInput.value = ""; // so picking the same file again still fires "change"
   if (!file) return;
 
   try {
+    let text;
     if (isPdfFile(file)) {
-      setStatus("Reading file...");
-      pendingAttachment = { name: file.name, kind: "pdf", data: await fileToBase64(file) };
+      setStatus("Extracting text with AI...");
+      const base64 = await fileToBase64(file);
+      const response = await chrome.runtime.sendMessage({ type: "EXTRACT_DOCUMENT_TEXT", base64 });
+      if (response.error) throw new Error(response.error);
+      text = response.text;
     } else if (isDocxFile(file)) {
       setStatus("Extracting text from .docx...");
-      pendingAttachment = { name: file.name, kind: "text", data: await extractDocxText(await fileToArrayBuffer(file)) };
+      text = await extractDocxText(await fileToArrayBuffer(file));
     } else {
-      pendingAttachment = { name: file.name, kind: "text", data: await fileToText(file) };
+      text = await fileToText(file);
     }
-    setStatus("");
+
+    if (!text || !text.trim()) {
+      setStatus("Couldn't find any text in that file.", true);
+      return;
+    }
+
+    pendingAttachment = { name: file.name, text: text.trim() };
+    await saveAttachmentAsNote(file.name, text.trim());
+    setStatus("Attached — also saved to About Me, so future questions (and other tasks) can use it too.");
     renderAttachmentChip();
   } catch (err) {
     setStatus(`Couldn't read that file: ${err.message}`, true);
   }
 });
+
+// Persisted the moment a file is attached — not gated on actually sending
+// the message — so "attach and forget" still remembers it. Same shape/
+// storage key as Options → Info → About Me, so it shows up there too.
+async function saveAttachmentAsNote(name, text) {
+  const { aboutMeNotes = [] } = await chrome.storage.local.get("aboutMeNotes");
+  aboutMeNotes.push({ id: crypto.randomUUID(), label: name, content: text, addedAt: Date.now() });
+  await chrome.storage.local.set({ aboutMeNotes });
+}
 
 removeAttachmentBtn.addEventListener("click", () => {
   pendingAttachment = null;
@@ -296,8 +321,7 @@ async function handleAsk() {
       history: messages.slice(0, -1), // everything before this new question
       presetPrompt: activePreset?.prompt,
       attachedFileName: attachment?.name,
-      attachedFileText: attachment?.kind === "text" ? attachment.data : undefined,
-      attachedFilePdfBase64: attachment?.kind === "pdf" ? attachment.data : undefined,
+      attachedFileText: attachment?.text,
     });
     if (response.error) throw new Error(response.error);
 

@@ -6,6 +6,7 @@ const coverLetterResult = document.getElementById("coverLetterResult");
 const coverLetterOutput = document.getElementById("coverLetterOutput");
 const copyBtn = document.getElementById("copyBtn");
 const downloadPdfBtn = document.getElementById("downloadPdfBtn");
+const downloadCoverLetterDocxBtn = document.getElementById("downloadCoverLetterDocxBtn");
 const insertBtn = document.getElementById("insertBtn");
 const generateCvDocxBtn = document.getElementById("generateCvDocxBtn");
 const addInfoBtn = document.getElementById("addInfoBtn");
@@ -65,6 +66,7 @@ autofillBtn.addEventListener("click", handleAutofill);
 generateBtn.addEventListener("click", handleGenerateCoverLetter);
 copyBtn.addEventListener("click", handleCopy);
 downloadPdfBtn.addEventListener("click", handleDownloadPdf);
+downloadCoverLetterDocxBtn.addEventListener("click", handleDownloadCoverLetterDocx);
 insertBtn.addEventListener("click", handleInsert);
 generateCvDocxBtn.addEventListener("click", handleGenerateCvDocx);
 addInfoBtn.addEventListener("click", () => {
@@ -241,6 +243,25 @@ async function handleDownloadPdf() {
 
     await chrome.downloads.download({ url, filename, saveAs: true });
     setStatus("Cover letter downloaded as PDF.");
+  } catch (err) {
+    setStatus(err.message, true);
+  }
+}
+
+async function handleDownloadCoverLetterDocx() {
+  try {
+    const { cvData } = await chrome.storage.local.get("cvData");
+    const bytes = generateCoverLetterDocx(coverLetterOutput.value);
+    const url = bytesToDataUrl(bytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+
+    const namePart = (cvData && cvData.full_name ? cvData.full_name : "cover-letter")
+      .trim()
+      .replace(/\s+/g, "_")
+      .replace(/[^\w-]/g, "");
+    const filename = `${namePart || "cover-letter"}_Cover_Letter.docx`;
+
+    await chrome.downloads.download({ url, filename, saveAs: true });
+    setStatus("Cover letter downloaded as a Word document.");
   } catch (err) {
     setStatus(err.message, true);
   }

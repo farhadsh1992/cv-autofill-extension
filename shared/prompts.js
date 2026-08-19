@@ -48,7 +48,7 @@ You are given:
 - REFERENCE_COVER_LETTER: a cover letter the applicant has written before. Use it only as a guide for their voice, tone, and typical structure — do not copy it verbatim, and do not reuse specifics (company names, roles) from it. Write a new letter tailored to JOB_CONTEXT.
 - JOB_CONTEXT: text scraped from the job posting page (title, company, description). It may be incomplete, noisy, or missing.
 
-Write a new cover letter grounded only in facts from CV_DATA — never invent employers, dates, skills, or achievements that aren't in CV_DATA. Keep it concise (250-400 words), professional, and specific to the role in JOB_CONTEXT where the context allows it. If JOB_CONTEXT is missing or unhelpful, write a solid general-purpose letter from CV_DATA instead of inventing job details.
+Write a new cover letter grounded only in facts from CV_DATA — never invent employers, dates, skills, or achievements that aren't in CV_DATA. Write enough to fill roughly one full page (about 380-450 words) — a complete, substantial letter, not a short note — professional, and specific to the role in JOB_CONTEXT where the context allows it. If JOB_CONTEXT is missing or unhelpful, write a solid general-purpose letter from CV_DATA instead of inventing job details. End with a simple signature line (e.g. "Sincerely," followed by the applicant's name) — do not repeat their email, phone number, or address anywhere in the letter; that contact information belongs on the CV, not restated here.
 
 Respond as JSON: {"cover_letter": "..."}. Respond with JSON only — no markdown code fences, no commentary.`,
 
@@ -85,6 +85,14 @@ Answer NEW_QUESTION directly and concisely, grounded only in the given informati
 
 Respond as JSON: {"answer": "..."}. Respond with JSON only — no markdown code fences, no commentary.`,
 
+  fieldFill: `You are helping a job applicant fill out a single field on a web form. Instead of leaving the field blank, they typed a short instruction describing what should go there — for example "add my address" or "write my most recent job title" — then selected that instruction text and asked you to replace it with the real value.
+
+You are given CV_DATA, ABOUT_ME, ADDRESSES (labeled physical addresses — use the most fitting one for address-shaped instructions), ADDITIONAL_RESOURCES, and the applicant's INSTRUCTION (the text they selected).
+
+Interpret INSTRUCTION and produce only the value that belongs in the field — grounded only in the given information, no extra commentary, no restating the instruction, no surrounding quotes. Never fabricate personal demographic information, government ID numbers, payment details, or passwords — if INSTRUCTION asks for one of those, or you don't have enough information to answer factually, say so plainly as the value instead of guessing.
+
+Respond as JSON: {"value": "..."}. Respond with JSON only — no markdown code fences, no commentary.`,
+
   jobExtract: `Extract details about the job posting described in this scraped page text.
 Respond as JSON with exactly this shape: {"title": "", "company": "", "location": "", "requirements": ""}.
 "requirements" should be a short 1-3 sentence summary of the key requirements/qualifications — not the full posting.
@@ -100,5 +108,6 @@ const PROMPT_TASK_LABELS = {
   coverLetterWrite: "Generate cover letter",
   cvTailor: "Tailor CV (Word)",
   ask: "Ask AI",
+  fieldFill: "Fill this field (right-click)",
   jobExtract: "Save this job",
 };

@@ -28,20 +28,61 @@ const taskModelSelects = {
   coverLetter: document.getElementById("taskModelCoverLetter"),
   ask: document.getElementById("taskModelAsk"),
 };
+// Free-text override sitting next to each task model <select> above, so a
+// provider's newer/future model IDs can be used without waiting for
+// MODEL_CATALOG (shared/models.js) to be updated first.
+const taskModelCustoms = {
+  autofill: document.getElementById("taskModelAutofillCustom"),
+  tailorCv: document.getElementById("taskModelTailorCvCustom"),
+  coverLetter: document.getElementById("taskModelCoverLetterCustom"),
+  ask: document.getElementById("taskModelAskCustom"),
+};
+
+// Returns the custom input's trimmed value if the user typed a model ID,
+// otherwise falls back to whatever's selected in the paired <select>. Shared
+// by every model picker (the 4 task-model selects and the 5 provider-default
+// selects below) so a provider shipping a model newer than this file's
+// hardcoded option lists doesn't require an update here to use it.
+function resolveModelValue(selectEl, customInputEl) {
+  const custom = customInputEl.value.trim();
+  return custom || selectEl.value;
+}
+
+// Sets a model <select> + its paired custom <input> from a stored model
+// string: if the value is one of the select's own <option>s, select it and
+// leave the custom input empty; otherwise (a custom/future model typed in
+// before, or a value that arrived via Backup import) leave the select at its
+// default and put the stored value in the custom input instead, so it's
+// visible/editable rather than looking silently reset.
+function setModelFieldFromStorage(selectEl, customInputEl, storedModel) {
+  customInputEl.value = "";
+  if (!storedModel) return;
+  const found = Array.from(selectEl.options).some((opt) => opt.value === storedModel);
+  if (found) {
+    selectEl.value = storedModel;
+  } else {
+    customInputEl.value = storedModel;
+  }
+}
 
 // Fills a task's model <select> with MODEL_CATALOG's options for whichever
 // provider that task is currently pointed at ("" = Active provider, which
-// has no specific model of its own to override — the select stays empty and
-// disabled in that case, so Save doesn't write a stale model value).
+// has no specific model of its own to override — the select and its custom
+// input stay empty and disabled in that case, so Save doesn't write a stale
+// model value).
 function populateTaskModelSelect(task, selectedModel) {
   const provider = taskProviderSelects[task].value;
   const modelSelect = taskModelSelects[task];
+  const customInput = taskModelCustoms[task];
   modelSelect.innerHTML = "";
+  customInput.value = "";
   if (!provider) {
     modelSelect.disabled = true;
+    customInput.disabled = true;
     return;
   }
   modelSelect.disabled = false;
+  customInput.disabled = false;
   const models = MODEL_CATALOG[provider] || [];
   for (const { value, label } of models) {
     const opt = document.createElement("option");
@@ -49,17 +90,15 @@ function populateTaskModelSelect(task, selectedModel) {
     opt.textContent = label;
     modelSelect.appendChild(opt);
   }
-  if (selectedModel && models.some((m) => m.value === selectedModel)) {
-    modelSelect.value = selectedModel;
-  }
+  setModelFieldFromStorage(modelSelect, customInput, selectedModel);
 }
 
 const PROVIDER_FIELD_IDS = {
-  openai: { apiKey: "openaiApiKey", showKey: "showOpenaiKey", model: "openaiModel" },
-  anthropic: { apiKey: "anthropicApiKey", showKey: "showAnthropicKey", model: "anthropicModel" },
-  kimi: { apiKey: "kimiApiKey", showKey: "showKimiKey", model: "kimiModel" },
-  gemini: { apiKey: "geminiApiKey", showKey: "showGeminiKey", model: "geminiModel" },
-  deepseek: { apiKey: "deepseekApiKey", showKey: "showDeepseekKey", model: "deepseekModel" },
+  openai: { apiKey: "openaiApiKey", showKey: "showOpenaiKey", model: "openaiModel", modelCustom: "openaiModelCustom" },
+  anthropic: { apiKey: "anthropicApiKey", showKey: "showAnthropicKey", model: "anthropicModel", modelCustom: "anthropicModelCustom" },
+  kimi: { apiKey: "kimiApiKey", showKey: "showKimiKey", model: "kimiModel", modelCustom: "kimiModelCustom" },
+  gemini: { apiKey: "geminiApiKey", showKey: "showGeminiKey", model: "geminiModel", modelCustom: "geminiModelCustom" },
+  deepseek: { apiKey: "deepseekApiKey", showKey: "showDeepseekKey", model: "deepseekModel", modelCustom: "deepseekModelCustom" },
 };
 const providerFields = {};
 for (const [id, fieldIds] of Object.entries(PROVIDER_FIELD_IDS)) {
@@ -67,6 +106,7 @@ for (const [id, fieldIds] of Object.entries(PROVIDER_FIELD_IDS)) {
     apiKeyInput: document.getElementById(fieldIds.apiKey),
     showKeyBox: document.getElementById(fieldIds.showKey),
     modelSelect: document.getElementById(fieldIds.model),
+    modelCustomInput: document.getElementById(fieldIds.modelCustom),
   };
 }
 
@@ -138,6 +178,31 @@ const exportJobsBtn = document.getElementById("exportJobsBtn");
 const jobsExportStatus = document.getElementById("jobsExportStatus");
 const jobsTableWrapEl = document.getElementById("jobsTableWrap");
 
+const conferenceNameInput = document.getElementById("conferenceNameInput");
+const conferenceDeadlineInput = document.getElementById("conferenceDeadlineInput");
+const conferenceLocationInput = document.getElementById("conferenceLocationInput");
+const conferenceLinkInput = document.getElementById("conferenceLinkInput");
+const conferenceStatusInput = document.getElementById("conferenceStatusInput");
+const conferenceNotesInput = document.getElementById("conferenceNotesInput");
+const addConferenceBtn = document.getElementById("addConferenceBtn");
+const conferenceAddStatus = document.getElementById("conferenceAddStatus");
+const conferencesFileNameInput = document.getElementById("conferencesFileName");
+const exportConferencesBtn = document.getElementById("exportConferencesBtn");
+const conferencesExportStatus = document.getElementById("conferencesExportStatus");
+const conferencesTableWrapEl = document.getElementById("conferencesTableWrap");
+
+const journalNameInput = document.getElementById("journalNameInput");
+const journalFullNameInput = document.getElementById("journalFullNameInput");
+const journalLinkInput = document.getElementById("journalLinkInput");
+const journalStatusInput = document.getElementById("journalStatusInput");
+const journalNotesInput = document.getElementById("journalNotesInput");
+const addJournalBtn = document.getElementById("addJournalBtn");
+const journalAddStatus = document.getElementById("journalAddStatus");
+const journalsFileNameInput = document.getElementById("journalsFileName");
+const exportJournalsBtn = document.getElementById("exportJournalsBtn");
+const journalsExportStatus = document.getElementById("journalsExportStatus");
+const journalsTableWrapEl = document.getElementById("journalsTableWrap");
+
 const promptSections = document.querySelectorAll(".promptSection");
 
 const askWindowPositionSelect = document.getElementById("askWindowPosition");
@@ -151,11 +216,23 @@ const askPresetListEl = document.getElementById("askPresetList");
 
 // ---- Tabs ----
 
+function switchTab(tabName) {
+  const btn = Array.from(tabBtns).find((b) => b.dataset.tab === tabName);
+  if (!btn) return;
+  for (const b of tabBtns) b.classList.toggle("active", b === btn);
+  for (const panel of tabPanels) panel.classList.toggle("active", panel.id === `tab-${tabName}`);
+}
+
 for (const btn of tabBtns) {
-  btn.addEventListener("click", () => {
-    for (const b of tabBtns) b.classList.toggle("active", b === btn);
-    for (const panel of tabPanels) panel.classList.toggle("active", panel.id === `tab-${btn.dataset.tab}`);
-  });
+  btn.addEventListener("click", () => switchTab(btn.dataset.tab));
+}
+
+// A fresh install opens straight here (see background.js's onInstalled
+// listener) so "Import backup" is easy to find instead of buried in a tab
+// nobody clicks on first launch.
+if (location.hash === "#backup") {
+  switchTab("info");
+  document.getElementById("backupSection")?.scrollIntoView();
 }
 
 init();
@@ -179,6 +256,10 @@ async function init() {
     "usage",
     "savedJobs",
     "jobsFileName",
+    "savedConferences",
+    "conferencesFileName",
+    "savedJournals",
+    "journalsFileName",
     "promptOverrides",
     "askWindowPosition",
     "askAIPresets",
@@ -207,6 +288,11 @@ async function init() {
   jobsFileNameInput.value = stored.jobsFileName || "applied jobs";
   renderJobsTable(stored.savedJobs || []);
 
+  conferencesFileNameInput.value = stored.conferencesFileName || "conferences";
+  renderConferencesTable(stored.savedConferences || []);
+  journalsFileNameInput.value = stored.journalsFileName || "journals";
+  renderJournalsTable(stored.savedJournals || []);
+
   let providers = stored.providers;
   let activeProvider = stored.activeProvider;
   if (!providers) {
@@ -227,7 +313,7 @@ async function init() {
   for (const [id, fields] of Object.entries(providerFields)) {
     const cfg = providers[id] || {};
     fields.apiKeyInput.value = cfg.apiKey || "";
-    if (cfg.model) fields.modelSelect.value = cfg.model;
+    setModelFieldFromStorage(fields.modelSelect, fields.modelCustomInput, cfg.model);
   }
   claudeCodeModelSelect.value = (providers.claudeCode || {}).model || "default";
   openaiCodeModelSelect.value = (providers.openaiCode || {}).model || "default";
@@ -271,11 +357,15 @@ async function saveAskTaskSetting() {
   const { taskProviders: existing = {}, taskModels: existingModels = {} } =
     await chrome.storage.local.get(["taskProviders", "taskModels"]);
   const taskProviders = { ...existing, ask: taskProviderSelects.ask.value };
-  const taskModels = { ...existingModels, ask: taskProviderSelects.ask.value ? taskModelSelects.ask.value : "" };
+  const taskModels = {
+    ...existingModels,
+    ask: taskProviderSelects.ask.value ? resolveModelValue(taskModelSelects.ask, taskModelCustoms.ask) : "",
+  };
   await chrome.storage.local.set({ taskProviders, taskModels });
 }
 taskProviderSelects.ask.addEventListener("change", saveAskTaskSetting);
 taskModelSelects.ask.addEventListener("change", saveAskTaskSetting);
+taskModelCustoms.ask.addEventListener("input", saveAskTaskSetting);
 
 askWindowPositionSelect.addEventListener("change", () => {
   chrome.storage.local.set({ askWindowPosition: askWindowPositionSelect.value });
@@ -431,7 +521,7 @@ saveBtn.addEventListener("click", async () => {
       flash(saveStatus, `The ${id} API key field has a URL in it, not a key — paste the actual key instead.`, true);
       return;
     }
-    providers[id] = { apiKey, model: fields.modelSelect.value };
+    providers[id] = { apiKey, model: resolveModelValue(fields.modelSelect, fields.modelCustomInput) };
   }
   providers.claudeCode = { model: claudeCodeModelSelect.value };
   providers.openaiCode = { model: openaiCodeModelSelect.value };
@@ -444,7 +534,7 @@ saveBtn.addEventListener("click", async () => {
   const taskModels = { ...existingTaskModels };
   for (const [task, select] of Object.entries(taskProviderSelects)) {
     taskProviders[task] = select.value;
-    taskModels[task] = select.value ? taskModelSelects[task].value : "";
+    taskModels[task] = select.value ? resolveModelValue(taskModelSelects[task], taskModelCustoms[task]) : "";
   }
 
   await chrome.storage.local.set({ providers, activeProvider: activeProviderSelect.value, taskProviders, taskModels });
@@ -962,6 +1052,10 @@ const BACKUP_KEYS = [
   "usage",
   "savedJobs",
   "jobsFileName",
+  "savedConferences",
+  "conferencesFileName",
+  "savedJournals",
+  "journalsFileName",
   "promptOverrides",
   "askWindowPosition",
   "askAIPresets",
@@ -1136,6 +1230,281 @@ exportJobsBtn.addEventListener("click", async () => {
     flash(jobsExportStatus, "Exported.");
   } catch (err) {
     flash(jobsExportStatus, err.message, true);
+  }
+});
+
+// ---- Academic: Conferences ----
+
+function renderConferencesTable(conferences) {
+  conferencesTableWrapEl.innerHTML = "";
+  if (!conferences.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No conferences saved yet — add one above.";
+    conferencesTableWrapEl.appendChild(empty);
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className = "jobsTable";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML =
+    "<tr><th>Name</th><th>Deadline</th><th>Location</th><th>Status</th><th>Link</th><th>Notes</th><th></th></tr>";
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for (const conf of conferences.slice().reverse()) {
+    const tr = document.createElement("tr");
+
+    const nameTd = document.createElement("td");
+    nameTd.textContent = conf.name || "";
+    tr.appendChild(nameTd);
+
+    const deadlineTd = document.createElement("td");
+    deadlineTd.textContent = conf.deadline || "";
+    tr.appendChild(deadlineTd);
+
+    const locationTd = document.createElement("td");
+    locationTd.textContent = conf.location || "";
+    tr.appendChild(locationTd);
+
+    const statusTd = document.createElement("td");
+    statusTd.textContent = conf.status || "";
+    tr.appendChild(statusTd);
+
+    const linkTd = document.createElement("td");
+    linkTd.className = "jobsLink";
+    if (conf.link) {
+      const a = document.createElement("a");
+      a.href = conf.link;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = conf.link;
+      a.title = conf.link;
+      linkTd.appendChild(a);
+    }
+    tr.appendChild(linkTd);
+
+    const notesTd = document.createElement("td");
+    const notesArea = document.createElement("textarea");
+    notesArea.rows = 2;
+    notesArea.value = conf.notes || "";
+    notesArea.addEventListener("change", async () => {
+      const { savedConferences: current = [] } = await chrome.storage.local.get("savedConferences");
+      const target = current.find((c) => c.id === conf.id);
+      if (target) {
+        target.notes = notesArea.value;
+        await chrome.storage.local.set({ savedConferences: current });
+      }
+    });
+    notesTd.appendChild(notesArea);
+    tr.appendChild(notesTd);
+
+    const removeTd = document.createElement("td");
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "secondary";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", async () => {
+      const { savedConferences: current = [] } = await chrome.storage.local.get("savedConferences");
+      const next = current.filter((c) => c.id !== conf.id);
+      await chrome.storage.local.set({ savedConferences: next });
+      renderConferencesTable(next);
+    });
+    removeTd.appendChild(removeBtn);
+    tr.appendChild(removeTd);
+
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  conferencesTableWrapEl.appendChild(table);
+}
+
+addConferenceBtn.addEventListener("click", async () => {
+  const name = conferenceNameInput.value.trim();
+  if (!name) {
+    flash(conferenceAddStatus, "Add at least a name.", true);
+    return;
+  }
+  const { savedConferences = [] } = await chrome.storage.local.get("savedConferences");
+  savedConferences.push({
+    id: crypto.randomUUID(),
+    name,
+    deadline: conferenceDeadlineInput.value.trim(),
+    location: conferenceLocationInput.value.trim(),
+    link: conferenceLinkInput.value.trim(),
+    status: conferenceStatusInput.value.trim(),
+    notes: conferenceNotesInput.value.trim(),
+    addedAt: Date.now(),
+  });
+  await chrome.storage.local.set({ savedConferences });
+  conferenceNameInput.value = "";
+  conferenceDeadlineInput.value = "";
+  conferenceLocationInput.value = "";
+  conferenceLinkInput.value = "";
+  conferenceStatusInput.value = "";
+  conferenceNotesInput.value = "";
+  renderConferencesTable(savedConferences);
+  flash(conferenceAddStatus, "Added.");
+});
+
+exportConferencesBtn.addEventListener("click", async () => {
+  try {
+    flash(conferencesExportStatus, "Exporting...");
+    const { savedConferences = [] } = await chrome.storage.local.get("savedConferences");
+    const baseName = conferencesFileNameInput.value.trim() || "conferences";
+    await chrome.storage.local.set({ conferencesFileName: baseName });
+
+    const docxBytes = generateConferencesDocx(savedConferences);
+    const docxUrl = bytesToDataUrl(docxBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    await chrome.downloads.download({ url: docxUrl, filename: `${baseName}.docx`, saveAs: false, conflictAction: "overwrite" });
+
+    const jsonBytes = new TextEncoder().encode(JSON.stringify(savedConferences, null, 2));
+    const jsonUrl = bytesToDataUrl(jsonBytes, "application/json");
+    await chrome.downloads.download({ url: jsonUrl, filename: `${baseName}.json`, saveAs: false, conflictAction: "overwrite" });
+
+    flash(conferencesExportStatus, "Exported.");
+  } catch (err) {
+    flash(conferencesExportStatus, err.message, true);
+  }
+});
+
+// ---- Academic: Journals ----
+
+function renderJournalsTable(journals) {
+  journalsTableWrapEl.innerHTML = "";
+  if (!journals.length) {
+    const empty = document.createElement("p");
+    empty.className = "muted";
+    empty.textContent = "No journals saved yet — add one above.";
+    journalsTableWrapEl.appendChild(empty);
+    return;
+  }
+
+  const table = document.createElement("table");
+  table.className = "jobsTable";
+
+  const thead = document.createElement("thead");
+  thead.innerHTML = "<tr><th>Name</th><th>Status</th><th>Link</th><th>Notes</th><th>Date</th><th></th></tr>";
+  table.appendChild(thead);
+
+  const tbody = document.createElement("tbody");
+  for (const journal of journals.slice().reverse()) {
+    const tr = document.createElement("tr");
+
+    // Short name, with the full name underneath as a smaller/muted line —
+    // not a separate column, so the table stays compact.
+    const nameTd = document.createElement("td");
+    const nameLine = document.createElement("div");
+    nameLine.textContent = journal.name || "";
+    nameTd.appendChild(nameLine);
+    if (journal.fullName) {
+      const fullNameLine = document.createElement("div");
+      fullNameLine.className = "muted";
+      fullNameLine.textContent = journal.fullName;
+      nameTd.appendChild(fullNameLine);
+    }
+    tr.appendChild(nameTd);
+
+    const statusTd = document.createElement("td");
+    statusTd.textContent = journal.status || "";
+    tr.appendChild(statusTd);
+
+    const linkTd = document.createElement("td");
+    linkTd.className = "jobsLink";
+    if (journal.link) {
+      const a = document.createElement("a");
+      a.href = journal.link;
+      a.target = "_blank";
+      a.rel = "noopener";
+      a.textContent = journal.link;
+      a.title = journal.link;
+      linkTd.appendChild(a);
+    }
+    tr.appendChild(linkTd);
+
+    const notesTd = document.createElement("td");
+    const notesArea = document.createElement("textarea");
+    notesArea.rows = 2;
+    notesArea.value = journal.notes || "";
+    notesArea.addEventListener("change", async () => {
+      const { savedJournals: current = [] } = await chrome.storage.local.get("savedJournals");
+      const target = current.find((j) => j.id === journal.id);
+      if (target) {
+        target.notes = notesArea.value;
+        await chrome.storage.local.set({ savedJournals: current });
+      }
+    });
+    notesTd.appendChild(notesArea);
+    tr.appendChild(notesTd);
+
+    const dateTd = document.createElement("td");
+    dateTd.textContent = docxFormatJobDate(journal.addedAt);
+    tr.appendChild(dateTd);
+
+    const removeTd = document.createElement("td");
+    const removeBtn = document.createElement("button");
+    removeBtn.className = "secondary";
+    removeBtn.textContent = "Remove";
+    removeBtn.addEventListener("click", async () => {
+      const { savedJournals: current = [] } = await chrome.storage.local.get("savedJournals");
+      const next = current.filter((j) => j.id !== journal.id);
+      await chrome.storage.local.set({ savedJournals: next });
+      renderJournalsTable(next);
+    });
+    removeTd.appendChild(removeBtn);
+    tr.appendChild(removeTd);
+
+    tbody.appendChild(tr);
+  }
+  table.appendChild(tbody);
+  journalsTableWrapEl.appendChild(table);
+}
+
+addJournalBtn.addEventListener("click", async () => {
+  const name = journalNameInput.value.trim();
+  if (!name) {
+    flash(journalAddStatus, "Add at least a name.", true);
+    return;
+  }
+  const { savedJournals = [] } = await chrome.storage.local.get("savedJournals");
+  savedJournals.push({
+    id: crypto.randomUUID(),
+    name,
+    fullName: journalFullNameInput.value.trim(),
+    link: journalLinkInput.value.trim(),
+    status: journalStatusInput.value.trim(),
+    notes: journalNotesInput.value.trim(),
+    addedAt: Date.now(),
+  });
+  await chrome.storage.local.set({ savedJournals });
+  journalNameInput.value = "";
+  journalFullNameInput.value = "";
+  journalLinkInput.value = "";
+  journalStatusInput.value = "";
+  journalNotesInput.value = "";
+  renderJournalsTable(savedJournals);
+  flash(journalAddStatus, "Added.");
+});
+
+exportJournalsBtn.addEventListener("click", async () => {
+  try {
+    flash(journalsExportStatus, "Exporting...");
+    const { savedJournals = [] } = await chrome.storage.local.get("savedJournals");
+    const baseName = journalsFileNameInput.value.trim() || "journals";
+    await chrome.storage.local.set({ journalsFileName: baseName });
+
+    const docxBytes = generateJournalsDocx(savedJournals);
+    const docxUrl = bytesToDataUrl(docxBytes, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+    await chrome.downloads.download({ url: docxUrl, filename: `${baseName}.docx`, saveAs: false, conflictAction: "overwrite" });
+
+    const jsonBytes = new TextEncoder().encode(JSON.stringify(savedJournals, null, 2));
+    const jsonUrl = bytesToDataUrl(jsonBytes, "application/json");
+    await chrome.downloads.download({ url: jsonUrl, filename: `${baseName}.json`, saveAs: false, conflictAction: "overwrite" });
+
+    flash(journalsExportStatus, "Exported.");
+  } catch (err) {
+    flash(journalsExportStatus, err.message, true);
   }
 });
 

@@ -173,6 +173,12 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
       .catch((err) => sendResponse({ error: err.message }));
     return true;
   }
+  if (msg.type === "FILL_FROM_INSTRUCTION") {
+    handleFillFromInstruction(msg)
+      .then(sendResponse)
+      .catch((err) => sendResponse({ error: err.message }));
+    return true;
+  }
   if (msg.type === "EXTRACT_DOCUMENT_TEXT") {
     handleExtractDocumentText(msg)
       .then(sendResponse)
@@ -592,12 +598,13 @@ ${jobContext || "(not available)"}`;
 // `presetPrompt` is a saved task's instructions (Options → Ask AI → Saved
 // tasks), attached by the chat window's # button — extra, user-authored
 // instructions layered on top of the base ask prompt, not a replacement.
-// `attachedFileText` (.docx/.txt, extracted client-side) is folded straight
-// into the prompt text — works with any provider. `attachedFilePdfBase64`
-// becomes a "pdf" content part instead, so it goes through callAI's normal
-// document-capable-provider check and gets the same clear error as CV/cover
-// letter PDF uploads do when the current provider doesn't support it.
-async function handleAskLlm({ cvData, question, history, presetPrompt, attachedFileName, attachedFileText, attachedFilePdfBase64 }) {
+// `attachedFileText` is already-extracted plain text (PDFs go through
+// EXTRACT_DOCUMENT_TEXT client-side first, .docx/.txt are read directly) —
+// folded straight into the prompt text, so it works with any provider, not
+// just document-capable ones. The chat window also saves it as a permanent
+// About Me note the moment it's attached, so ABOUT_ME below will keep
+// including it on later turns even without re-attaching.
+async function handleAskLlm({ cvData, question, history, presetPrompt, attachedFileName, attachedFileText }) {
   if (!question || !question.trim()) throw new Error("Type a question first.");
   const context = await buildContextBlock();
   const overrides = await getPromptOverrides();
@@ -608,9 +615,8 @@ async function handleAskLlm({ cvData, question, history, presetPrompt, attachedF
   const taskBlock = presetPrompt && presetPrompt.trim() ? `\nTASK_INSTRUCTIONS (apply these for this conversation):\n${presetPrompt.trim()}\n` : "";
   const attachedTextBlock =
     attachedFileText && attachedFileText.trim() ? `\nATTACHED_FILE (${attachedFileName || "file"}):\n${attachedFileText.trim()}\n` : "";
-  const attachedPdfNote = attachedFilePdfBase64 ? `\nAn attached file (${attachedFileName || "file"}) follows as a PDF.\n` : "";
   const prompt = `${askPrompt}
-${taskBlock}${attachedTextBlock}${attachedPdfNote}
+${taskBlock}${attachedTextBlock}
 ${context}
 
 CV_DATA:
@@ -622,12 +628,34 @@ ${historyBlock || "(none — this is the first message)"}
 NEW_QUESTION:
 ${question.trim()}`;
 
-  const parts = [{ type: "text", text: prompt }];
-  if (attachedFilePdfBase64) parts.push({ type: "pdf", base64: attachedFilePdfBase64 });
+  const { taskProviders = {}, taskModels = {} } = await chrome.storage.local.get(["taskProviders", "taskModels"]);
+  const result = await callAI([{ type: "text", text: prompt }], taskProviders.ask, taskModels.ask);
+  return { answer: (result.answer || "").trim() };
+}
+
+// Right-click "Fill this field": the user typed an instruction directly
+// into a form field, selected it, and asked to have it replaced with the
+// real value. `instruction` is that selected text — no page context is
+// scraped here, this is deliberately a single-field, single-shot action.
+async function handleFillFromInstruction({ instruction }) {
+  if (!instruction || !instruction.trim()) throw new Error("Nothing selected to interpret.");
+  const { cvData } = await chrome.storage.local.get("cvData");
+  const context = await buildContextBlock();
+  const overrides = await getPromptOverrides();
+  const fillPrompt = resolvePrompt(overrides, "fieldFill");
+  const prompt = `${fillPrompt}
+
+${context}
+
+CV_DATA:
+${JSON.stringify(cvData || {})}
+
+INSTRUCTION:
+${instruction.trim()}`;
 
   const { taskProviders = {}, taskModels = {} } = await chrome.storage.local.get(["taskProviders", "taskModels"]);
-  const result = await callAI(parts, taskProviders.ask, taskModels.ask);
-  return { answer: (result.answer || "").trim() };
+  const result = await callAI([{ type: "text", text: prompt }], taskProviders.ask, taskModels.ask);
+  return { value: (result.value || "").trim() };
 }
 
 function bgBytesToDataUrl(bytes, mimeType) {
@@ -678,4 +706,145 @@ async function handleSaveJob({ jobContext, url }) {
   await chrome.downloads.download({ url: jsonUrl, filename: `${baseName}.json`, saveAs: false, conflictAction: "overwrite" });
 
   return { job };
+}
+
+// ---- Right-click "Fill this field" ----
+// Type an instruction straight into a form field ("add my address"),
+// select it, right-click, and this replaces the selection with the real
+// value — grounded in CV_DATA/ABOUT_ME/ADDRESSES/ADDITIONAL_RESOURCES, via
+// handleFillFromInstruction above. Deliberately a single-field, single-shot
+// action — no page scraping, no other fields touched.
+
+chrome.runtime.onInstalled.addListener((details) => {
+  // removeAll first — recreating with the same id on every install/update
+  // (including a dev "reload extension") would otherwise throw "duplicate
+  // id" on the second run.
+  chrome.contextMenus.removeAll(() => {
+    chrome.contextMenus.create({
+      id: "cvAutofillFillSelection",
+      title: "CV AutoFill: Fill this field",
+      contexts: ["editable"],
+    });
+  });
+
+  // First-ever install (not an update/dev-reload) — open straight to the
+  // Backup section so a returning user can find "Import backup" immediately
+  // instead of hunting for it.
+  if (details.reason === "install") {
+    chrome.tabs.create({ url: chrome.runtime.getURL("options/options.html") + "#backup" });
+  }
+});
+
+chrome.contextMenus.onClicked.addListener((info, tab) => {
+  if (info.menuItemId !== "cvAutofillFillSelection" || !tab || !tab.id) return;
+  // Swallowed on purpose: this only fails for pages content scripts can't
+  // run on at all (chrome://, the Web Store, ...) — the injected function
+  // below handles every in-page error itself via its own toast.
+  chrome.scripting.executeScript({ target: { tabId: tab.id }, func: fillSelectionWithAI }).catch(() => {});
+});
+
+// Self-contained on purpose — chrome.scripting.executeScript serializes this
+// function and runs it in the page's isolated content-script world, so it
+// can't reference anything from this file's own scope. It captures the
+// current selection (input/textarea selectionStart/End, or a contenteditable
+// Range) as plain local variables before doing anything async, so later
+// DOM changes (the toast itself) can't invalidate it. It asks the service
+// worker to interpret the selection via chrome.runtime.sendMessage
+// (available in this world) and splices the answer back into exactly the
+// range that was selected.
+function fillSelectionWithAI() {
+  function showToast(anchor, text, isError) {
+    let toast = document.getElementById("__cvAutofillFillToast");
+    if (!toast) {
+      toast = document.createElement("div");
+      toast.id = "__cvAutofillFillToast";
+      document.body.appendChild(toast);
+    }
+    let top = 16;
+    let left = 16;
+    if (anchor && anchor.getBoundingClientRect) {
+      const rect = anchor.getBoundingClientRect();
+      top = rect.bottom + 6;
+      left = rect.left;
+    }
+    toast.textContent = text;
+    toast.style.cssText =
+      `position:fixed; top:${top}px; left:${left}px; z-index:2147483647; ` +
+      `background:${isError ? "#d70015" : "#2a8f3f"}; color:#fff; padding:6px 10px; ` +
+      `border-radius:6px; font-size:12px; font-family:-apple-system,"Segoe UI",sans-serif; ` +
+      `box-shadow:0 2px 6px rgba(0,0,0,.25); pointer-events:none; max-width:320px;`;
+    clearTimeout(toast.dataset.timer);
+    const timer = setTimeout(() => toast.remove(), 2600);
+    toast.dataset.timer = timer;
+  }
+
+  const el = document.activeElement;
+  const isInputLike = el && (el.tagName === "INPUT" || el.tagName === "TEXTAREA");
+  const isContentEditable = el && el.isContentEditable;
+  if (!isInputLike && !isContentEditable) {
+    showToast(null, "Select the instruction text inside a form field first.", true);
+    return;
+  }
+
+  let instruction;
+  let replace;
+  if (isInputLike) {
+    const start = el.selectionStart;
+    const end = el.selectionEnd;
+    instruction = el.value.slice(start, end);
+    replace = (value) => {
+      const before = el.value.slice(0, start);
+      const after = el.value.slice(end);
+      // React (and similar frameworks) track <input>/<textarea> value via
+      // their own patched setter, so a plain `el.value = ...` assignment
+      // is invisible to their onChange — set it through the native
+      // prototype setter instead, same trick this extension's autofill
+      // fill already uses (see fillFormsInPage in popup/popup.js).
+      const proto = Object.getPrototypeOf(el);
+      const desc = Object.getOwnPropertyDescriptor(proto, "value");
+      const nextValue = before + value + after;
+      if (desc && desc.set) {
+        desc.set.call(el, nextValue);
+      } else {
+        el.value = nextValue;
+      }
+      el.selectionStart = el.selectionEnd = before.length + value.length;
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+      el.dispatchEvent(new Event("change", { bubbles: true }));
+    };
+  } else {
+    const sel = window.getSelection();
+    if (!sel || sel.rangeCount === 0 || sel.isCollapsed) {
+      showToast(el, "Select the instruction text inside this field first.", true);
+      return;
+    }
+    instruction = sel.toString();
+    const range = sel.getRangeAt(0).cloneRange();
+    replace = (value) => {
+      range.deleteContents();
+      range.insertNode(document.createTextNode(value));
+      el.dispatchEvent(new Event("input", { bubbles: true }));
+    };
+  }
+
+  if (!instruction || !instruction.trim()) {
+    showToast(el, "Select the instruction text inside this field first.", true);
+    return;
+  }
+
+  showToast(el, "Asking CV AutoFill...", false);
+
+  chrome.runtime
+    .sendMessage({ type: "FILL_FROM_INSTRUCTION", instruction })
+    .then((response) => {
+      if (!response || response.error) {
+        showToast(el, (response && response.error) || "No response from the AI.", true);
+        return;
+      }
+      replace(response.value || "");
+      showToast(el, "Filled by CV AutoFill.", false);
+    })
+    .catch((err) => {
+      showToast(el, err.message || "Couldn't reach the extension.", true);
+    });
 }

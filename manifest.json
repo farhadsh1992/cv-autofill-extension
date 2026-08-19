@@ -3,7 +3,7 @@
   "name": "Farhad's CV AutoFill",
   "version": "0.1.0",
   "description": "Upload your CV once and auto-fill job application forms using AI. Nothing is ever auto-submitted.",
-  "permissions": ["storage", "activeTab", "scripting", "downloads", "nativeMessaging"],
+  "permissions": ["storage", "activeTab", "scripting", "downloads", "nativeMessaging", "contextMenus"],
   "host_permissions": [
     "https://api.openai.com/*",
     "https://api.anthropic.com/*",

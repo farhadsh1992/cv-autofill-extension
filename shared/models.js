@@ -8,6 +8,9 @@ const MODEL_CATALOG = {
     { value: "gpt-4o", label: "gpt-4o" },
     { value: "gpt-4.1-mini", label: "gpt-4.1-mini" },
     { value: "gpt-4.1", label: "gpt-4.1" },
+    { value: "gpt-5.6-sol", label: "gpt-5.6-sol (flagship)" },
+    { value: "gpt-5.6-terra", label: "gpt-5.6-terra (balanced)" },
+    { value: "gpt-5.6-luna", label: "gpt-5.6-luna (fast/cheap)" },
   ],
   anthropic: [
     { value: "claude-sonnet-5", label: "claude-sonnet-5 (balanced)" },

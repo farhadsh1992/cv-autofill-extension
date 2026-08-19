@@ -39,10 +39,13 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
 4. Or click **Generate cover letter for this page**. The extension scrapes
    the job posting's title/description off the current page, and asks the
    model to write a new letter grounded in your CV data, in the voice of your
-   saved reference letter (never copied verbatim). The draft appears in the
-   popup, editable, with **Copy**, **Download PDF** (generated locally in the
-   browser — no server involved), and — if a matching "cover letter" field is
-   found on the page — **Insert into page field**.
+   saved reference letter (never copied verbatim) — long enough to fill
+   roughly one full page, with no contact info repeated at the end (that
+   belongs on the CV, not the letter). The draft appears in the popup,
+   editable, with **Copy**, **Download PDF** and **Download Word** (both
+   generated locally in the browser — no server involved), and — if a
+   matching "cover letter" field is found on the page — **Insert into page
+   field**.
 5. Or click **Generate tailored CV (Word)**. Same job-context scraping, but
    the model re-emphasizes/reorders your *real* CV content (summary, bullet
    points, skills) for that specific role — never invents new facts — and it
@@ -65,10 +68,12 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
    tasks) — pick one and its instructions apply to every message in that
    chat, shown as a "#label" chip, until you clear it or switch to a
    different one. The **📎** button attaches a PDF, Word (.docx), or .txt
-   file to your next message — its text (extracted locally for .docx/.txt;
-   sent as a PDF part for providers that support it) is used for that one
-   answer, not resent on later turns. Its own provider/model and where it
-   opens on your screen are set in **Options → Ask AI**.
+   file — its text is extracted (PDFs via an AI call, since there's no PDF
+   parser available inside a browser extension; .docx/.txt read locally)
+   and saved as a permanent About Me note the moment it's attached, so it's
+   remembered for every future question — and every other AI task — without
+   re-attaching it again. Its own provider/model and where it opens on your
+   screen are set in **Options → Ask AI**.
 8. **Save this job** (popup button) scrapes the current page, asks the model
    to pull out the job title/company/location/a short requirements summary,
    and adds a row to an "applied jobs" table kept in the extension's own
@@ -76,7 +81,15 @@ vector mark (`icon_final_hero.svg` / `icon_final_simple.svg`, still in
    Each save also writes a fresh Word (`.docx`) table and a matching `.json`
    file with everything in it straight to your Downloads folder — no dialog,
    overwriting the same file each time (see the Applied jobs section below).
-9. **Options → About me / notes**: add as many labeled notes as you want —
+9. **Fill this field** (right-click) — type an instruction straight into any
+   form field instead of leaving it blank (e.g. "add my address"), select
+   that text, right-click, and choose **CV AutoFill: Fill this field**. The
+   selected text is sent as an instruction — grounded in your CV, About Me
+   notes, addresses, and resources — and the AI's answer replaces exactly
+   what you selected. A small toast near the field confirms it worked (or
+   explains what went wrong). Single field, single shot — no other fields on
+   the page are touched, and nothing is scraped from the page itself.
+10. **Options → About me / notes**: add as many labeled notes as you want —
    availability, preferences, anything not in your CV — or upload a PDF,
    Word (.docx), or .txt file (a diploma, certificate, reference letter) and
    its text is extracted and saved as a labeled note the same way. **Options
@@ -201,11 +214,16 @@ which one is **active** with the "Currently using" dropdown (this dropdown
 also includes the two terminal providers described above, once their bridge
 is set up). Switch anytime without re-entering anything.
 
-- OpenAI: https://platform.openai.com/api-keys (`gpt-4o-mini` is the default model)
+- OpenAI: https://platform.openai.com/api-keys (`gpt-4o-mini` is the default model; the GPT-5.6 family — `gpt-5.6-sol`, `gpt-5.6-terra`, `gpt-5.6-luna` — is also in the dropdown)
 - Anthropic: https://console.anthropic.com/settings/keys (`claude-sonnet-5` is the default model)
 - Kimi (Moonshot): https://platform.moonshot.ai/console/api-keys (`kimi-k2.5` is the default model)
 - Gemini (Google): https://aistudio.google.com/apikey (`gemini-3.5-flash` is the default model)
 - DeepSeek: https://platform.deepseek.com/api_keys (`deepseek-v4-flash` is the default model)
+
+Every model picker (per-provider defaults above, and the per-action "Model per
+action" pickers) also has a small text field next to it for typing any model
+ID directly — use it if a provider ships something newer than what's in the
+dropdown, without waiting for this extension to be updated.
 
 Each needs a real API key from that provider's own developer console, billed
 per call — none of them offer a public "log in with your consumer chat
@@ -336,7 +354,8 @@ native-host/install.sh  One-time setup for the Claude Code/Codex terminal provid
 lib/docx.js             Standalone .docx → plain text/style extractor (no external library)
 lib/pdf-writer.js       Standalone plain text → PDF writer (no external library)
 lib/docx-writer.js      Standalone plain data → .docx writer (CV template + optional photo/color,
-                        plus a plain bordered-table doc used for the applied-jobs export)
+                        a plain bordered-table doc for the applied-jobs export, and a plain
+                        paragraph doc for the cover letter export)
 popup/                  Toolbar popup UI — autofill, cover letter, tailored CV, add info, ask AI
 options/                Appearance/AI/Info/Jobs/Prompts tabs — theme & color, provider keys &
                         per-action model routing & spend estimate, CV/cover letter upload,

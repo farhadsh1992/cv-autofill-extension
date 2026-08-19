@@ -18,6 +18,7 @@
       <button class="tabBtn" data-tab="askai">Ask AI</button>
       <button class="tabBtn" data-tab="info">Info</button>
       <button class="tabBtn" data-tab="jobs">Jobs</button>
+      <button class="tabBtn" data-tab="academic">Academic</button>
       <button class="tabBtn" data-tab="prompts">Prompts</button>
     </nav>
 
@@ -81,6 +82,7 @@
           </select>
           <select id="taskModelAutofill" disabled></select>
         </div>
+        <input type="text" id="taskModelAutofillCustom" placeholder="or type a custom model ID (e.g. gpt-5.6-terra)" disabled />
         <label class="muted" for="taskProviderTailorCv" style="display: block; margin-top: 10px">Rebuild / tailor CV</label>
         <div class="row">
           <select id="taskProviderTailorCv">
@@ -95,6 +97,7 @@
           </select>
           <select id="taskModelTailorCv" disabled></select>
         </div>
+        <input type="text" id="taskModelTailorCvCustom" placeholder="or type a custom model ID (e.g. gpt-5.6-terra)" disabled />
         <label class="muted" for="taskProviderCoverLetter" style="display: block; margin-top: 10px">Rebuild / write cover letter</label>
         <div class="row">
           <select id="taskProviderCoverLetter">
@@ -109,6 +112,7 @@
           </select>
           <select id="taskModelCoverLetter" disabled></select>
         </div>
+        <input type="text" id="taskModelCoverLetterCustom" placeholder="or type a custom model ID (e.g. gpt-5.6-terra)" disabled />
       </section>
 
       <hr />
@@ -173,7 +177,11 @@
           <option value="gpt-4o">gpt-4o</option>
           <option value="gpt-4.1-mini">gpt-4.1-mini</option>
           <option value="gpt-4.1">gpt-4.1</option>
+          <option value="gpt-5.6-sol">gpt-5.6-sol (flagship)</option>
+          <option value="gpt-5.6-terra">gpt-5.6-terra (balanced)</option>
+          <option value="gpt-5.6-luna">gpt-5.6-luna (fast/cheap)</option>
         </select>
+        <input type="text" id="openaiModelCustom" placeholder="or type a custom model ID (e.g. gpt-5.6-terra)" />
       </details>
 
       <details>
@@ -190,6 +198,7 @@
           <option value="claude-opus-5">claude-opus-5 (most capable)</option>
           <option value="claude-haiku-4-5-20251001">claude-haiku-4-5 (fastest/cheapest)</option>
         </select>
+        <input type="text" id="anthropicModelCustom" placeholder="or type a custom model ID (e.g. gpt-5.6-terra)" />
       </details>
 
       <details>
@@ -207,6 +216,7 @@
           <option value="kimi-k2.5">kimi-k2.5 (default, cheapest)</option>
           <option value="kimi-k3">kimi-k3 (most capable)</option>
         </select>
+        <input type="text" id="kimiModelCustom" placeholder="or type a custom model ID (e.g. gpt-5.6-terra)" />
       </details>
 
       <details>
@@ -222,6 +232,7 @@
           <option value="gemini-3.5-flash">gemini-3.5-flash (default, fastest/cheapest)</option>
           <option value="gemini-3.1-pro">gemini-3.1-pro (most capable)</option>
         </select>
+        <input type="text" id="geminiModelCustom" placeholder="or type a custom model ID (e.g. gpt-5.6-terra)" />
       </details>
 
       <details>
@@ -239,6 +250,7 @@
           <option value="deepseek-v4-flash">deepseek-v4-flash (default, fastest/cheapest)</option>
           <option value="deepseek-v4-pro">deepseek-v4-pro-0813 (most capable)</option>
         </select>
+        <input type="text" id="deepseekModelCustom" placeholder="or type a custom model ID (e.g. gpt-5.6-terra)" />
       </details>
 
       <hr />
@@ -333,6 +345,7 @@
           </select>
           <select id="taskModelAsk" disabled></select>
         </div>
+        <input type="text" id="taskModelAskCustom" placeholder="or type a custom model ID (e.g. gpt-5.6-terra)" disabled />
       </section>
 
       <hr />
@@ -530,6 +543,12 @@
           GitHub repo, not shared with anyone) and never commit it anywhere.</strong>
           To "update" a backup, just export again over the same file.
         </p>
+        <p class="muted">
+          New install? If you have a backup.json from a previous install (or
+          from the Mac app), import it here to restore your CV, cover
+          letter, jobs, conferences, journals, notes, and settings in one
+          step.
+        </p>
         <div class="row">
           <button id="exportBackupBtn" class="secondary">Export backup</button>
           <label class="fileBtn">
@@ -587,6 +606,87 @@
           <span id="jobsExportStatus" class="muted"></span>
         </div>
         <div id="jobsTableWrap" style="margin-top: 12px"></div>
+      </section>
+    </div>
+
+    <!-- ==================== Academic (Conferences / Journals) ==================== -->
+    <div class="tabPanel" id="tab-academic">
+      <section>
+        <h2>Conferences</h2>
+        <p class="muted">
+          Track conferences you're planning to submit to, or have submitted
+          to. Entered by hand — nothing here is scraped from a page.
+        </p>
+
+        <input type="text" id="conferenceNameInput" placeholder="Name — e.g. NeurIPS 2026" />
+        <div class="row">
+          <input type="text" id="conferenceDeadlineInput" placeholder="Deadline — e.g. 2026-03-01 or Rolling" style="flex: 1" />
+          <input type="text" id="conferenceLocationInput" placeholder="Location" style="flex: 1" />
+        </div>
+        <div class="row">
+          <input type="text" id="conferenceLinkInput" placeholder="Link" style="flex: 1" />
+          <input
+            type="text"
+            id="conferenceStatusInput"
+            placeholder="Status — e.g. Planning to submit, Submitted, Accepted, Rejected, Attending"
+            style="flex: 1"
+          />
+        </div>
+        <textarea id="conferenceNotesInput" rows="3" placeholder="Notes"></textarea>
+        <div class="row">
+          <button id="addConferenceBtn">Add conference</button>
+          <span id="conferenceAddStatus" class="muted"></span>
+        </div>
+
+        <hr />
+
+        <label class="muted" for="conferencesFileName" style="display: block">File name (used for both .docx and .json)</label>
+        <input type="text" id="conferencesFileName" placeholder="conferences" />
+        <div class="row">
+          <button id="exportConferencesBtn" class="secondary">Export Word + JSON</button>
+          <span id="conferencesExportStatus" class="muted"></span>
+        </div>
+        <div id="conferencesTableWrap" style="margin-top: 12px"></div>
+      </section>
+
+      <hr />
+
+      <section>
+        <h2>Journals</h2>
+        <p class="muted">
+          Track journal submissions. Entered by hand, same as Conferences —
+          journal submissions are typically rolling, so there's no deadline
+          or location field here.
+        </p>
+
+        <div class="row">
+          <input type="text" id="journalNameInput" placeholder="Name — e.g. IEEE TPAMI" style="flex: 1" />
+          <input type="text" id="journalFullNameInput" placeholder="Full name — e.g. IEEE Transactions on Pattern Analysis and Machine Intelligence" style="flex: 1" />
+        </div>
+        <div class="row">
+          <input type="text" id="journalLinkInput" placeholder="Link" style="flex: 1" />
+          <input
+            type="text"
+            id="journalStatusInput"
+            placeholder="Status — e.g. Planning to submit, Submitted, Accepted, Rejected"
+            style="flex: 1"
+          />
+        </div>
+        <textarea id="journalNotesInput" rows="3" placeholder="Notes"></textarea>
+        <div class="row">
+          <button id="addJournalBtn">Add journal</button>
+          <span id="journalAddStatus" class="muted"></span>
+        </div>
+
+        <hr />
+
+        <label class="muted" for="journalsFileName" style="display: block">File name (used for both .docx and .json)</label>
+        <input type="text" id="journalsFileName" placeholder="journals" />
+        <div class="row">
+          <button id="exportJournalsBtn" class="secondary">Export Word + JSON</button>
+          <span id="journalsExportStatus" class="muted"></span>
+        </div>
+        <div id="journalsTableWrap" style="margin-top: 12px"></div>
       </section>
     </div>
 
@@ -684,6 +784,19 @@
       <section class="promptSection" data-prompt-key="ask">
         <h3>Ask AI</h3>
         <p class="muted">Used by the "Ask AI directly" popup window.</p>
+        <textarea class="promptTextarea" rows="8" spellcheck="false"></textarea>
+        <div class="row" style="margin-top: 6px">
+          <button class="promptSaveBtn">Save</button>
+          <button class="promptResetBtn secondary">Reset to default</button>
+          <span class="promptStatus muted"></span>
+        </div>
+      </section>
+
+      <hr />
+
+      <section class="promptSection" data-prompt-key="fieldFill">
+        <h3>Fill this field (right-click)</h3>
+        <p class="muted">Used when you type an instruction into a form field, select it, and right-click → "CV AutoFill: Fill this field".</p>
         <textarea class="promptTextarea" rows="8" spellcheck="false"></textarea>
         <div class="row" style="margin-top: 6px">
           <button class="promptSaveBtn">Save</button>
